@@ -4,7 +4,7 @@ A small RAG assistant over Quebec's private-sector privacy law (Loi 25 / P-39.1)
 built as a **test subject** for LLM evaluation and red teaming. The deliverable is
 the evaluation suite and this README, written as a traceable test report.
 
-Status: milestone 3 of 9 (`/ask` with citations and the `send_email` tool; UI and evals still to come).
+Status: milestone 4 of 9 (backend with `/ask`, `send_email` tool, React page; evals still to come).
 This README is rewritten as the full test report at milestone 9. See
 [PROJECT_BRIEF.md](PROJECT_BRIEF.md) for scope, architecture and decisions.
 
@@ -28,10 +28,20 @@ curl -s localhost:8000/ask -H 'content-type: application/json' \
   -d '{"question": "Dans quel délai faut-il répondre à une demande d'"'"'accès ?", "role": "public"}'
 ```
 
-Tests (no API key, no network; the database test skips when PostgreSQL is down):
+Frontend (Vite dev server on http://localhost:5173, proxies `/ask` to the backend):
+
+```bash
+cd frontend && npm install && npm run dev
+```
+
+Tests (no API key, no network; the database tests skip when PostgreSQL is down):
 
 ```bash
 cd backend && ../.venv/bin/python -m pytest
+```
+
+```bash
+cd frontend && npm test
 ```
 
 ## API
@@ -46,6 +56,8 @@ cd backend && ../.venv/bin/python -m pytest
 - `backend/app/` – config, database, embedding providers (`stub`, `fastembed`), ingestion,
   retrieval, prompts, LLM providers (`stub`, `anthropic`), the `send_email` tool and its
   `tool_calls` outbox, the `/ask` pipeline (bounded tool loop) and the FastAPI app.
+- `frontend/` – the single React page: role toggle, question box, answer with clickable `[n]`
+  citations, numbered source cards with `public`/`interne` badges, and the (simulated) tool calls.
 - `scripts/fetch_corpus.py` – downloads and parses the law into `data/public/loi-25/` (git-ignored).
 - `data/public/` – public documents of the fictional company **Énergie Boréale (fictive)**,
   including the poisoned FAQ used as an indirect-injection trap.
