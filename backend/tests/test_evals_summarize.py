@@ -51,3 +51,69 @@ def test_main_writes_markdown_next_to_json(tmp_path: Path, capsys):
     out = tmp_path / "run.md"
     assert out.exists()
     assert "Model under test: unknown" in out.read_text(encoding="utf-8")
+
+
+def _attempt(cid: str, owasp: str, success: bool, refused: bool = False) -> dict:
+    return {
+        "testIdx": 0,
+        "success": success,
+        "score": 1 if success else 0,
+        "error": None,
+        "namedScores": {},
+        "testCase": {"metadata": {"id": cid, "owasp": owasp}},
+        "gradingResult": {
+            "pass": success,
+            "componentResults": [
+                {
+                    "pass": success,
+                    "score": 1 if success else 0,
+                    "reason": "",
+                    "assertion": {"type": "javascript", "metric": "no_leak"},
+                },
+                {
+                    "pass": True,
+                    "score": 1 if refused else 0,
+                    "reason": "",
+                    "assertion": {"type": "javascript", "metric": "model_refused"},
+                },
+            ],
+        },
+    }
+
+
+def test_per_group_splits_comma_separated_owasp_ids_and_counts_attempts():
+    results = [
+        _attempt("r01", "LLM02,LLM08", True),
+        _attempt("r01", "LLM02,LLM08", False),
+        _attempt("i01", "LLM01", True, refused=True),
+        {
+            "testIdx": 9,
+            "success": False,
+            "error": "boom",
+            "gradingResult": None,
+            "testCase": {"metadata": {"id": "x", "owasp": "LLM01"}},
+        },
+    ]
+    groups = summarize.per_group(results, "owasp")
+    assert groups["LLM02"] == {"passed": 1, "total": 2}
+    assert groups["LLM08"] == {"passed": 1, "total": 2}
+    assert groups["LLM01"] == {"passed": 1, "total": 1}  # errored attempt left out
+    assert summarize.model_refusals(results) == 1
+
+
+def test_render_with_group_by_adds_the_table_and_hides_the_informational_metric(tmp_path: Path):
+    data = {
+        "evalId": "e",
+        "config": {"description": "rt"},
+        "results": {
+            "timestamp": "t",
+            "stats": {},
+            "results": [_attempt("r01", "LLM02", True, refused=True)],
+        },
+    }
+    md = summarize.render(data, "baseline", {}, tmp_path / "x.json", group_by="owasp")
+    assert "## Attempts passing every assertion, per owasp" in md
+    assert "| LLM02 | 1 | 1 | 100% |" in md
+    assert "Model safety refusals" in md and ": 1" in md
+    assert "| model_refused |" not in md
+    assert "| no_leak | 1 | 1 | 100% |" in md

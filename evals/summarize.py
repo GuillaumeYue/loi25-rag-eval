@@ -69,6 +69,35 @@ def errored(results: list[dict[str, Any]]) -> list[tuple[str, str]]:
     ]
 
 
+def per_group(results: list[dict[str, Any]], key: str) -> OrderedDict[str, dict[str, int]]:
+    """Attempts and fully-passing attempts per value of a metadata key.
+
+    A comma-separated value (e.g. owasp "LLM02,LLM08") counts under each entry.
+    Errored attempts are left out, as in per_metric.
+    """
+    groups: OrderedDict[str, dict[str, int]] = OrderedDict()
+    for res in results:
+        if res.get("error") and not res.get("gradingResult"):
+            continue
+        meta = (res.get("testCase") or {}).get("metadata") or {}
+        for value in str(meta.get(key) or "untagged").split(","):
+            g = groups.setdefault(value.strip(), {"passed": 0, "total": 0})
+            g["total"] += 1
+            if res.get("success"):
+                g["passed"] += 1
+    return groups
+
+
+def model_refusals(results: list[dict[str, Any]]) -> int:
+    """Attempts where the informational `model_refused` assertion scored 1."""
+    n = 0
+    for res in results:
+        for comp in (res.get("gradingResult") or {}).get("componentResults") or []:
+            if (comp.get("assertion") or {}).get("metric") == "model_refused" and comp.get("score"):
+                n += 1
+    return n
+
+
 def judge_model(data: dict[str, Any]) -> str:
     options = ((data.get("config") or {}).get("defaultTest") or {}).get("options") or {}
     provider = options.get("provider")
@@ -77,7 +106,13 @@ def judge_model(data: dict[str, Any]) -> str:
     return str(provider or "n/a")
 
 
-def render(data: dict[str, Any], label: str, backend: dict[str, Any], source: Path) -> str:
+def render(
+    data: dict[str, Any],
+    label: str,
+    backend: dict[str, Any],
+    source: Path,
+    group_by: str | None = None,
+) -> str:
     body = data["results"]
     results = body["results"]
     stats = body.get("stats") or {}
@@ -103,6 +138,24 @@ def render(data: dict[str, Any], label: str, backend: dict[str, Any], source: Pa
         f"- All assertions passed: {passed}/{scored}"
         + (f" ({100 * passed / scored:.0f}%)" if scored else ""),
         f"- Duration: {stats.get('durationMs', 'n/a')} ms",
+    ]
+    refusals = model_refusals(results)
+    if refusals:
+        lines.append(
+            f"- Model safety refusals (counted as pass, listed for transparency): {refusals}"
+        )
+    if group_by:
+        lines += [
+            "",
+            f"## Attempts passing every assertion, per {group_by}",
+            "",
+            f"| {group_by} | passed | attempts | rate |",
+            "|---|---:|---:|---:|",
+        ]
+        for name, g in per_group(results, group_by).items():
+            rate = f"{100 * g['passed'] / g['total']:.0f}%" if g["total"] else "n/a"
+            lines.append(f"| {name} | {g['passed']} | {g['total']} | {rate} |")
+    lines += [
         "",
         "## Pass rate per metric",
         "",
@@ -110,6 +163,8 @@ def render(data: dict[str, Any], label: str, backend: dict[str, Any], source: Pa
         "|---|---:|---:|---:|",
     ]
     for name, m in metrics.items():
+        if name == "model_refused":
+            continue  # informational, always passes; reported above
         rate = f"{100 * m['passed'] / m['total']:.0f}%" if m["total"] else "n/a"
         lines.append(f"| {name} | {m['passed']} | {m['total']} | {rate} |")
 
@@ -144,10 +199,11 @@ def main(argv: list[str]) -> int:
         "--backend", default="http://localhost:8000", help="backend URL for /health"
     )
     parser.add_argument("--out", type=Path, help="markdown path (default: next to the JSON)")
+    parser.add_argument("--group-by", help="metadata key for a per-group table, e.g. owasp")
     args = parser.parse_args(argv)
 
     data = load_results(args.results)
-    report = render(data, args.label, backend_info(args.backend), args.results)
+    report = render(data, args.label, backend_info(args.backend), args.results, args.group_by)
     out = args.out or args.results.with_suffix(".md")
     out.write_text(report, encoding="utf-8")
     print(report)

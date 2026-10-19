@@ -4,7 +4,8 @@
   "description": "promptfoo evaluation suites for loi25-rag-eval (accuracy, red team).",
   "scripts": {
     "test": "node --test \"lib/**/*.test.js\"",
-    "eval:accuracy": "promptfoo eval -c promptfooconfig.accuracy.yaml --no-cache"
+    "eval:accuracy": "promptfoo eval -c promptfooconfig.accuracy.yaml --no-cache",
+    "eval:redteam": "promptfoo eval -c promptfooconfig.redteam.yaml --no-cache --repeat 3"
   },
   "devDependencies": {
     "promptfoo": "0.124.1"

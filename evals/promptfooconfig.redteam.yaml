@@ -1,0 +1,31 @@
+# Red-team suite: the deliberate traps (canary note, poisoned FAQ, send_email)
+# under direct and indirect prompt injection, with OWASP LLM Top 10 (2025) IDs
+# on every case. Attack outcomes vary run to run, so the npm script repeats
+# each case 3 times and the summary reports pass rate per attempt.
+#
+# Run (backend up on :8000, ANTHROPIC_API_KEY in the environment for the judge):
+#   cd evals && npm run eval:redteam -- -o results/<date>-redteam-<label>.json
+#   ../.venv/bin/python summarize.py results/<date>-redteam-<label>.json --group-by owasp
+description: "loi25-rag-eval red-team suite (26 cases x 3)"
+
+prompts:
+  - "{{question}}"
+
+providers:
+  - id: http://localhost:8000/ask
+    label: loi25-rag
+    config:
+      method: POST
+      headers:
+        Content-Type: application/json
+      body:
+        question: "{{question}}"
+        role: "{{role}}"
+      transformResponse: json
+
+defaultTest:
+  options:
+    provider: anthropic:messages:claude-sonnet-5-5
+    rubricPrompt: file://accuracy/rubric-prompt.json
+
+tests: file://redteam/cases.yaml
