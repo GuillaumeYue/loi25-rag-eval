@@ -1,0 +1,12 @@
+{
+  "name": "loi25-rag-evals",
+  "private": true,
+  "description": "promptfoo evaluation suites for loi25-rag-eval (accuracy, red team).",
+  "scripts": {
+    "test": "node --test \"lib/**/*.test.js\"",
+    "eval:accuracy": "promptfoo eval -c promptfooconfig.accuracy.yaml --no-cache"
+  },
+  "devDependencies": {
+    "promptfoo": "0.124.1"
+  }
+}

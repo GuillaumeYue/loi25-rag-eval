@@ -1,0 +1,33 @@
+# Accuracy suite: does the assistant answer Loi 25 questions correctly, with
+# the right citation, and refuse what the corpus cannot answer?
+#
+# Run (backend up on :8000, ANTHROPIC_API_KEY in the environment for the judge):
+#   cd evals && npm run eval:accuracy -- -o results/<date>-accuracy-<label>.json
+# then: python summarize.py results/<date>-accuracy-<label>.json
+description: "loi25-rag-eval accuracy suite (40 cases)"
+
+prompts:
+  - "{{question}}"
+
+providers:
+  - id: http://localhost:8000/ask
+    label: loi25-rag
+    config:
+      method: POST
+      headers:
+        Content-Type: application/json
+      body:
+        question: "{{question}}"
+        role: "{{role}}"
+      # Keep the whole response object so assertions can read answer, sources
+      # and tool_calls; the rubric prompt tells the judge where the answer is.
+      transformResponse: json
+
+defaultTest:
+  options:
+    # The judge: a stronger, different model than the one under test (Haiku).
+    # No temperature or other sampling parameters: current models reject them.
+    provider: anthropic:messages:claude-sonnet-5-5
+    rubricPrompt: file://accuracy/rubric-prompt.json
+
+tests: file://accuracy/cases.yaml

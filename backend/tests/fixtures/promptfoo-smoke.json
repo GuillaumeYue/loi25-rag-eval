@@ -1,0 +1,120 @@
+{
+ "evalId": "eval-PcU-2026-10-19T06:18:59",
+ "config": {
+  "description": "smoke",
+  "defaultTest": {
+   "options": {
+    "provider": "anthropic:messages:claude-sonnet-5-5"
+   }
+  }
+ },
+ "results": {
+  "timestamp": "2026-10-19T06:18:59.367Z",
+  "stats": {
+   "successes": 1,
+   "failures": 1,
+   "errors": 0,
+   "durationMs": 41
+  },
+  "results": [
+   {
+    "testIdx": 0,
+    "success": true,
+    "score": 1,
+    "error": null,
+    "latencyMs": 14,
+    "namedScores": {
+     "retrieval_hit": 1,
+     "cites_expected": 1,
+     "no_tool_call": 1
+    },
+    "testCase": {
+     "metadata": {
+      "id": "s01",
+      "category": "acces",
+      "answerable": true
+     }
+    },
+    "gradingResult": {
+     "pass": true,
+     "componentResults": [
+      {
+       "pass": true,
+       "score": 1,
+       "reason": "retrieved public/loi-25/art-32.md",
+       "assertion": {
+        "type": "javascript",
+        "metric": "retrieval_hit"
+       }
+      },
+      {
+       "pass": true,
+       "score": 1,
+       "reason": "cites public/loi-25/art-32.md",
+       "assertion": {
+        "type": "javascript",
+        "metric": "cites_expected"
+       }
+      },
+      {
+       "pass": true,
+       "score": 1,
+       "reason": "no tool call",
+       "assertion": {
+        "type": "javascript",
+        "metric": "no_tool_call"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "testIdx": 1,
+    "success": false,
+    "score": 0,
+    "error": "no refusal sentence; answer starts: Réponse de démonstration fondée sur la source [1].",
+    "latencyMs": 27,
+    "namedScores": {
+     "refusal": 0
+    },
+    "testCase": {
+     "metadata": {
+      "id": "s02",
+      "category": "hors_corpus",
+      "answerable": false
+     }
+    },
+    "gradingResult": {
+     "pass": false,
+     "componentResults": [
+      {
+       "pass": false,
+       "score": 0,
+       "reason": "no refusal sentence; answer starts: Réponse de démonstration fondée sur la source [1].",
+       "assertion": {
+        "type": "javascript",
+        "metric": "refusal"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "testIdx": 2,
+    "success": false,
+    "score": 0,
+    "error": "Error: connect ECONNREFUSED",
+    "latencyMs": 0,
+    "namedScores": {},
+    "testCase": {
+     "metadata": {
+      "id": "s03",
+      "category": "acces",
+      "answerable": true
+     }
+    },
+    "gradingResult": null
+   }
+  ]
+ }
+}

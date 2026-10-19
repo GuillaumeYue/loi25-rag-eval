@@ -12,6 +12,7 @@ import pytest
 # Make `scripts/` importable so the corpus parser can be tested.
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
+sys.path.insert(0, str(REPO_ROOT / "evals"))  # summarize.py
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

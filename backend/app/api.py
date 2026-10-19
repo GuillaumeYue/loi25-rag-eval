@@ -49,8 +49,17 @@ app = FastAPI(title="loi25-rag-eval", version="0.3.0")
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health() -> dict[str, object]:
+    """Liveness plus the configuration under test, so eval reports can record it."""
+    return {
+        "status": "ok",
+        "llm_provider": config.llm_provider(),
+        "model": config.anthropic_model() if config.llm_provider() == "anthropic" else None,
+        "embedding_provider": config.embedding_provider(),
+        "top_k": config.top_k(),
+        # Mitigation flags arrive in milestone 7; an empty dict means "baseline".
+        "flags": {},
+    }
 
 
 @app.post("/ask", response_model=AskResponse)

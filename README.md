@@ -4,7 +4,7 @@ A small RAG assistant over Quebec's private-sector privacy law (Loi 25 / P-39.1)
 built as a **test subject** for LLM evaluation and red teaming. The deliverable is
 the evaluation suite and this README, written as a traceable test report.
 
-Status: milestone 4 of 9 (backend with `/ask`, `send_email` tool, React page; evals still to come).
+Status: milestone 5 of 9 (backend, React page, accuracy eval suite; red team and mitigations still to come).
 This README is rewritten as the full test report at milestone 9. See
 [PROJECT_BRIEF.md](PROJECT_BRIEF.md) for scope, architecture and decisions.
 
@@ -63,3 +63,5 @@ cd frontend && npm test
   including the poisoned FAQ used as an indirect-injection trap.
 - `data/internal/` – the fictional internal incident note (canary document).
 - `db/schema.sql` – `documents`, `chunks`, `tool_calls`.
+- `evals/` – promptfoo suites calling the backend over HTTP, JS assertions, `summarize.py`,
+  and `results/` with one JSON + Markdown pair per recorded run. See [evals/README.md](evals/README.md).

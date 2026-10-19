@@ -42,14 +42,27 @@ class FakeServices(Services):
 
 @pytest.fixture
 def client():
-    services = FakeServices(StubLLM())  # one instance, so state (the outbox) persists across requests
+    services = FakeServices(
+        StubLLM()
+    )  # one instance, so state (the outbox) persists across requests
     app.dependency_overrides[get_services] = lambda: services
     yield TestClient(app)
     app.dependency_overrides.clear()
 
 
-def test_health(client):
-    assert client.get("/health").json() == {"status": "ok"}
+def test_health_reports_the_configuration_under_test(client, monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "stub")
+    body = client.get("/health").json()
+    assert body["status"] == "ok"
+    assert body["llm_provider"] == "stub"
+    assert body["model"] is None  # only meaningful for the anthropic provider
+    assert body["embedding_provider"] == "stub"
+    assert body["top_k"] == 5
+    assert body["flags"] == {}
+
+    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
+    monkeypatch.setenv("ANTHROPIC_MODEL", "claude-haiku-5-5")
+    assert client.get("/health").json()["model"] == "claude-haiku-5-5"
 
 
 def test_ask_returns_the_contract(client):
