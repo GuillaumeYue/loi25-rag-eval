@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -5,6 +7,7 @@ from app.api import Services, app, get_services
 from app.llm.base import LLMError
 from app.llm.stub import STUB_ANSWER, StubLLM
 from app.retrieval import RetrievedChunk
+from app.tools import ToolCallRecord
 
 CHUNK = RetrievedChunk(1, "Texte.", "Titre", "public/doc.md", "public", 0.9)
 
@@ -17,13 +20,30 @@ class FakeServices(Services):
         self.embedder = None
         self.llm = llm
 
+        self.outbox = [
+            ToolCallRecord(2, "send_email", {"to": "b@x.example"}, datetime(2026, 10, 19, 12, 0)),
+            ToolCallRecord(1, "send_email", {"to": "a@x.example"}, datetime(2026, 10, 19, 11, 0)),
+        ]
+
     def retriever(self, question, k, role):
         return [CHUNK]
+
+    def execute_tool(self, call):
+        raise AssertionError("the stub never calls tools")
+
+    def list_tool_calls(self):
+        return self.outbox
+
+    def clear_tool_calls(self):
+        n = len(self.outbox)
+        self.outbox = []
+        return n
 
 
 @pytest.fixture
 def client():
-    app.dependency_overrides[get_services] = lambda: FakeServices(StubLLM())
+    services = FakeServices(StubLLM())  # one instance, so state (the outbox) persists across requests
+    app.dependency_overrides[get_services] = lambda: services
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -73,3 +93,18 @@ def test_llm_failure_becomes_502():
         app.dependency_overrides.clear()
     assert r.status_code == 502
     assert "quota exceeded" in r.json()["detail"]
+
+
+def test_tool_calls_outbox_newest_first(client):
+    r = client.get("/tool-calls")
+    assert r.status_code == 200
+    body = r.json()
+    assert [row["id"] for row in body] == [2, 1]
+    assert body[0]["tool"] == "send_email"
+    assert body[0]["arguments"] == {"to": "b@x.example"}
+    assert body[0]["created_at"].startswith("2026-10-19T12:00:00")
+
+
+def test_clearing_the_outbox(client):
+    assert client.delete("/tool-calls").json() == {"deleted": 2}
+    assert client.get("/tool-calls").json() == []

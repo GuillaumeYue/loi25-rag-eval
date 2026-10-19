@@ -7,7 +7,7 @@ from typing import Any
 import anthropic
 
 from app import config
-from app.llm.base import LLMError, LLMResult, ToolCall, ToolSpec
+from app.llm.base import LLMError, LLMResult, ToolCall, ToolResult, ToolSpec
 
 
 class AnthropicLLM:
@@ -18,12 +18,24 @@ class AnthropicLLM:
         self._max_tokens = max_tokens or config.llm_max_tokens()
 
     def complete(self, system: str, user: str, tools: list[ToolSpec]) -> LLMResult:
+        return self._call(system, [{"role": "user", "content": user}], tools)
+
+    def continue_after_tools(
+        self,
+        system: str,
+        user: str,
+        previous: LLMResult,
+        tool_results: list[ToolResult],
+        tools: list[ToolSpec],
+    ) -> LLMResult:
+        return self._call(system, build_continuation_messages(user, previous, tool_results), tools)
+
+    def _call(
+        self, system: str, messages: list[dict[str, Any]], tools: list[ToolSpec]
+    ) -> LLMResult:
         kwargs: dict[str, Any] = {}
         if tools:
-            kwargs["tools"] = [
-                {"name": t.name, "description": t.description, "input_schema": t.input_schema}
-                for t in tools
-            ]
+            kwargs["tools"] = [tool_definition(t) for t in tools]
         try:
             # No temperature/top_p: current models reject non-default sampling parameters.
             # Thinking is left at the model default (adaptive on Haiku 5.5).
@@ -31,7 +43,7 @@ class AnthropicLLM:
                 model=self._model,
                 max_tokens=self._max_tokens,
                 system=system,
-                messages=[{"role": "user", "content": user}],
+                messages=messages,
                 **kwargs,
             )
         except anthropic.RateLimitError as exc:
@@ -41,6 +53,39 @@ class AnthropicLLM:
         except anthropic.APIConnectionError as exc:
             raise LLMError(f"cannot reach the Claude API: {exc}") from exc
         return parse_response(response)
+
+
+def tool_definition(tool: ToolSpec) -> dict[str, Any]:
+    return {"name": tool.name, "description": tool.description, "input_schema": tool.input_schema}
+
+
+def build_continuation_messages(
+    user: str, previous: LLMResult, tool_results: list[ToolResult]
+) -> list[dict[str, Any]]:
+    """The three-message exchange the API expects after a tool_use stop.
+
+    The assistant turn is the model's previous content passed back verbatim
+    (`previous.raw`), thinking blocks included: the API requires them unchanged.
+    All tool results go in ONE user message, in the order the calls were made.
+    """
+    if previous.raw is None:
+        raise ValueError("cannot continue: previous result carries no raw assistant content")
+    return [
+        {"role": "user", "content": user},
+        {"role": "assistant", "content": previous.raw},
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "tool_result",
+                    "tool_use_id": r.call_id,
+                    "content": r.content,
+                    "is_error": r.is_error,
+                }
+                for r in tool_results
+            ],
+        },
+    ]
 
 
 def parse_response(response: Any) -> LLMResult:
@@ -56,9 +101,10 @@ def parse_response(response: Any) -> LLMResult:
             texts.append(block.text)
         elif block.type == "tool_use":
             # `input` is already parsed JSON (a dict) in the SDK.
-            calls.append(ToolCall(name=block.name, arguments=dict(block.input)))
+            calls.append(ToolCall(id=block.id, name=block.name, arguments=dict(block.input)))
     return LLMResult(
         text="\n".join(texts).strip(),
         tool_calls=calls,
         stop_reason=response.stop_reason or "end_turn",
+        raw=response.content,
     )

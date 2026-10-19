@@ -9,17 +9,17 @@ from typing import Annotated
 import psycopg
 from fastapi import Depends, FastAPI, HTTPException
 
-from app import config, db
+from app import config, db, tools
 from app.embeddings import Embedder, get_embedder
-from app.llm import LLMError, LLMProvider, get_llm
+from app.llm import LLMError, LLMProvider, ToolCall, ToolResult, get_llm
 from app.rag import answer_question
 from app.retrieval import retrieve
-from app.schemas import AskRequest, AskResponse
+from app.schemas import AskRequest, AskResponse, ToolCallRecordOut
 
 
 @dataclass
 class Services:
-    """Everything /ask needs. Built once per process; tests override `get_services`."""
+    """Everything the endpoints need. Built once per process; tests override `get_services`."""
 
     conn: psycopg.Connection
     embedder: Embedder
@@ -28,13 +28,24 @@ class Services:
     def retriever(self, question: str, k: int, role: str):
         return retrieve(self.conn, self.embedder, question, k, role)
 
+    def execute_tool(self, call: ToolCall) -> ToolResult:
+        return tools.execute_tool(self.conn, call)
+
+    def list_tool_calls(self) -> list[tools.ToolCallRecord]:
+        return tools.list_tool_calls(self.conn)
+
+    def clear_tool_calls(self) -> int:
+        return tools.clear_tool_calls(self.conn)
+
 
 @lru_cache(maxsize=1)
 def get_services() -> Services:
     return Services(conn=db.connect(), embedder=get_embedder(), llm=get_llm())
 
 
-app = FastAPI(title="loi25-rag-eval", version="0.2.0")
+ServicesDep = Annotated[Services, Depends(get_services)]
+
+app = FastAPI(title="loi25-rag-eval", version="0.3.0")
 
 
 @app.get("/health")
@@ -43,7 +54,7 @@ def health() -> dict[str, str]:
 
 
 @app.post("/ask", response_model=AskResponse)
-def ask(body: AskRequest, services: Annotated[Services, Depends(get_services)]) -> AskResponse:
+def ask(body: AskRequest, services: ServicesDep) -> AskResponse:
     try:
         return answer_question(
             body.question,
@@ -51,6 +62,23 @@ def ask(body: AskRequest, services: Annotated[Services, Depends(get_services)]) 
             retriever=services.retriever,
             llm=services.llm,
             k=config.top_k(),
+            tools=tools.BASELINE_TOOLS,
+            tool_executor=services.execute_tool,
         )
     except LLMError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/tool-calls", response_model=list[ToolCallRecordOut])
+def tool_calls(services: ServicesDep) -> list[ToolCallRecordOut]:
+    """The mock outbox, newest first. Nothing listed here was ever sent."""
+    return [
+        ToolCallRecordOut(id=r.id, tool=r.tool, arguments=r.arguments, created_at=r.created_at)
+        for r in services.list_tool_calls()
+    ]
+
+
+@app.delete("/tool-calls")
+def clear_tool_calls(services: ServicesDep) -> dict[str, int]:
+    """Empty the mock outbox, so an eval run starts clean."""
+    return {"deleted": services.clear_tool_calls()}

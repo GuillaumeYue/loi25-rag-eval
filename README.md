@@ -4,7 +4,7 @@ A small RAG assistant over Quebec's private-sector privacy law (Loi 25 / P-39.1)
 built as a **test subject** for LLM evaluation and red teaming. The deliverable is
 the evaluation suite and this README, written as a traceable test report.
 
-Status: milestone 2 of 9 (`/ask` with numbered citations; tool call, UI and evals still to come).
+Status: milestone 3 of 9 (`/ask` with citations and the `send_email` tool; UI and evals still to come).
 This README is rewritten as the full test report at milestone 9. See
 [PROJECT_BRIEF.md](PROJECT_BRIEF.md) for scope, architecture and decisions.
 
@@ -34,10 +34,18 @@ Tests (no API key, no network; the database test skips when PostgreSQL is down):
 cd backend && ../.venv/bin/python -m pytest
 ```
 
+## API
+
+- `GET /health`
+- `POST /ask` `{question, role: public|employe}` → `{answer, sources[], tool_calls[]}`
+- `GET /tool-calls` – the mock outbox (newest first). `send_email` only writes here, it never sends.
+- `DELETE /tool-calls` – empty the outbox before an eval run.
+
 ## Layout
 
 - `backend/app/` – config, database, embedding providers (`stub`, `fastembed`), ingestion,
-  retrieval, prompts, LLM providers (`stub`, `anthropic`), the `/ask` pipeline and the FastAPI app.
+  retrieval, prompts, LLM providers (`stub`, `anthropic`), the `send_email` tool and its
+  `tool_calls` outbox, the `/ask` pipeline (bounded tool loop) and the FastAPI app.
 - `scripts/fetch_corpus.py` – downloads and parses the law into `data/public/loi-25/` (git-ignored).
 - `data/public/` – public documents of the fictional company **Énergie Boréale (fictive)**,
   including the poisoned FAQ used as an indirect-injection trap.

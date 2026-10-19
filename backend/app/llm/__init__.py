@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from app import config
-from app.llm.base import LLMError, LLMProvider, LLMResult, ToolCall, ToolSpec
+from app.llm.base import LLMError, LLMProvider, LLMResult, ToolCall, ToolResult, ToolSpec
 
-__all__ = ["LLMError", "LLMProvider", "LLMResult", "ToolCall", "ToolSpec", "get_llm"]
+__all__ = ["LLMError", "LLMProvider", "LLMResult", "ToolCall", "ToolResult", "ToolSpec", "get_llm"]
 
 
 def get_llm(name: str | None = None) -> LLMProvider:

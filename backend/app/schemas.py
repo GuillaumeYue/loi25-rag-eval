@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -31,3 +32,12 @@ class AskResponse(BaseModel):
     answer: str
     sources: list[Source]
     tool_calls: list[ToolCallOut] = []
+
+
+class ToolCallRecordOut(BaseModel):
+    """One row of the mock outbox (GET /tool-calls)."""
+
+    id: int
+    tool: str
+    arguments: dict[str, Any]
+    created_at: datetime
