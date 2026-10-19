@@ -31,5 +31,22 @@ def embedding_model() -> str:
     )
 
 
+def llm_provider() -> str:
+    """`stub` (tests), `anthropic` (Claude API) or `ollama` (not implemented yet)."""
+    return os.environ.get("LLM_PROVIDER", "stub")
+
+
+def anthropic_model() -> str:
+    return os.environ.get("ANTHROPIC_MODEL", "claude-haiku-5-5")
+
+
+def llm_max_tokens() -> int:
+    return int(os.environ.get("LLM_MAX_TOKENS", "4096"))
+
+
+def top_k() -> int:
+    return int(os.environ.get("TOP_K", "5"))
+
+
 SCHEMA_FILE = REPO_ROOT / "db" / "schema.sql"
 DATA_DIR = REPO_ROOT / "data"

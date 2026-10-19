@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "RAG assistant over Quebec's Loi 25, built as a test subject for LLM evaluation and red teaming."
 requires-python = ">=3.11"
 dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "anthropic>=1.0",
     "psycopg[binary]>=3.2",
     "pgvector>=0.3",
     "fastembed>=0.5",
@@ -16,6 +19,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
+    "httpx>=0.27",
     "ruff>=0.6",
 ]
 
