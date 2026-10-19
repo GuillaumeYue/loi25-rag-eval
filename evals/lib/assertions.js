@@ -29,7 +29,8 @@ function citedNumbers(answer) {
 
 function expectedSources(context) {
   let expected = context?.vars?.expected_sources;
-  // promptfoo hands list variables to file assertions as a JSON string.
+  // cases.yaml writes it as a comma-separated string (a YAML list would make
+  // promptfoo expand the case into one test per value); JSON is accepted too.
   if (typeof expected === "string") {
     try {
       expected = JSON.parse(expected);

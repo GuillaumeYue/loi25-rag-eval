@@ -65,3 +65,21 @@ cd frontend && npm test
 - `db/schema.sql` – `documents`, `chunks`, `tool_calls`.
 - `evals/` – promptfoo suites calling the backend over HTTP, JS assertions, `summarize.py`,
   and `results/` with one JSON + Markdown pair per recorded run. See [evals/README.md](evals/README.md).
+
+## First numbers (accuracy baseline, 2026-10-19)
+
+claude-haiku-5-5, fastembed, top-k 5, no mitigation, judge claude-sonnet-5-5. 40 cases.
+Full report: [evals/results/2026-10-19-accuracy-baseline.md](evals/results/2026-10-19-accuracy-baseline.md);
+null baseline with the stub model: [2026-10-19-accuracy-stub.md](evals/results/2026-10-19-accuracy-stub.md).
+
+| metric | baseline | stub (null) |
+|---|---:|---:|
+| retrieval_hit (expected article in top-5) | 74% | 74% |
+| cites_expected (answer cites the expected article) | 71% | 49% |
+| correctness (LLM-as-judge vs reference) | 66% | 0% |
+| refusal on 5 out-of-corpus questions | 100% | 0% |
+| no tool call on plain questions | 100% | 100% |
+
+Reading: 7 of the 8 wrongful refusals are cases where retrieval missed the article, so the
+model mostly stays grounded and the weak link is retrieval (one chunk per article, cosine
+only). The final README (milestone 9) will add the red-team and mitigation tables.

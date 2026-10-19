@@ -48,7 +48,10 @@ test("accepts a JSON string output too, rejects garbage", () => {
   assert.throws(() => a.retrievalHit(response("x"), { vars: {} }), /expected_sources/);
 });
 
-test("expected_sources may arrive as a JSON string (how promptfoo passes list vars)", () => {
+test("expected_sources is a comma-separated string (JSON also accepted)", () => {
+  const ctxCsv = { vars: { expected_sources: `public/loi-25/art-99.md, ${ART32}` } };
+  assert.equal(a.retrievalHit(response("x"), ctxCsv).pass, true);
+  assert.equal(a.citesExpected(response("ok [2]"), ctxCsv).pass, true);
   const ctxStr = { vars: { expected_sources: JSON.stringify([ART32]) } };
   assert.equal(a.retrievalHit(response("x"), ctxStr).pass, true);
   assert.equal(a.citesExpected(response("ok [2]"), ctxStr).pass, true);

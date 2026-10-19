@@ -2,7 +2,9 @@
 # P-39.1, 3 on the fictional company's public documents) and 5 questions the
 # corpus cannot answer. Written by the project author from the article text;
 # `reference` is what a correct answer must contain, `expected_sources` lists
-# every source path that counts as the right place to have looked.
+# every source path that counts as the right place to have looked, as ONE
+# comma-separated string: promptfoo turns a list-valued var into one test case
+# per value, which would split "either article is fine" into two cases.
 #
 # Each case carries its assertions explicitly through YAML anchors defined on
 # the first case of each kind, so nothing depends on defaultTest.
@@ -12,7 +14,7 @@
   vars:
     question: "Qu'est-ce qu'un renseignement personnel au sens de la Loi 25 ?"
     role: public
-    expected_sources: ["public/loi-25/art-2.md"]
+    expected_sources: "public/loi-25/art-2.md"
     reference: "Tout renseignement qui concerne une personne physique et permet, directement ou indirectement, de l'identifier."
   assert: &answerable
     - type: javascript
@@ -42,7 +44,7 @@
   vars:
     question: "La Loi 25 s'applique-t-elle au matériel journalistique, historique ou généalogique ?"
     role: public
-    expected_sources: ["public/loi-25/art-1.md"]
+    expected_sources: "public/loi-25/art-1.md"
     reference: "Non : la loi ne s'applique pas à la collecte, la détention, l'utilisation ou la communication de matériel journalistique, historique ou généalogique à une fin d'information légitime du public."
   assert: *answerable
 
@@ -51,7 +53,7 @@
   vars:
     question: "Qui est, par défaut, le responsable de la protection des renseignements personnels dans une entreprise, et cette fonction peut-elle être déléguée ?"
     role: public
-    expected_sources: ["public/loi-25/art-3.1.md"]
+    expected_sources: "public/loi-25/art-3.1.md"
     reference: "La personne ayant la plus haute autorité au sein de l'entreprise exerce cette fonction ; elle peut la déléguer par écrit, en tout ou en partie, à toute personne."
   assert: *answerable
 
@@ -60,7 +62,7 @@
   vars:
     question: "Que doivent prévoir les politiques et pratiques de gouvernance des renseignements personnels d'une entreprise ?"
     role: public
-    expected_sources: ["public/loi-25/art-3.2.md"]
+    expected_sources: "public/loi-25/art-3.2.md"
     reference: "L'encadrement de la conservation et de la destruction des renseignements, les rôles et responsabilités du personnel tout au long du cycle de vie des renseignements, et un processus de traitement des plaintes ; elles doivent être proportionnées aux activités de l'entreprise et publiées en termes simples et clairs."
   assert: *answerable
 
@@ -69,7 +71,7 @@
   vars:
     question: "Dans quels cas une entreprise doit-elle réaliser une évaluation des facteurs relatifs à la vie privée ?"
     role: public
-    expected_sources: ["public/loi-25/art-3.3.md", "public/loi-25/art-17.md"]
+    expected_sources: "public/loi-25/art-3.3.md, public/loi-25/art-17.md"
     reference: "Pour tout projet d'acquisition, de développement ou de refonte de système d'information ou de prestation électronique de services impliquant des renseignements personnels (et avant de communiquer un renseignement personnel à l'extérieur du Québec)."
   assert: *answerable
 
@@ -78,7 +80,7 @@
   vars:
     question: "Quelles mesures de sécurité une entreprise doit-elle prendre pour protéger les renseignements personnels qu'elle détient ?"
     role: public
-    expected_sources: ["public/loi-25/art-10.md"]
+    expected_sources: "public/loi-25/art-10.md"
     reference: "Des mesures de sécurité raisonnables compte tenu notamment de la sensibilité des renseignements, de la finalité de leur utilisation, de leur quantité, de leur répartition et de leur support."
   assert: *answerable
 
@@ -87,7 +89,7 @@
   vars:
     question: "Qu'est-ce qu'un incident de confidentialité ?"
     role: public
-    expected_sources: ["public/loi-25/art-3.6.md"]
+    expected_sources: "public/loi-25/art-3.6.md"
     reference: "L'accès, l'utilisation ou la communication non autorisés par la loi d'un renseignement personnel, ainsi que la perte d'un renseignement personnel ou toute autre atteinte à sa protection."
   assert: *answerable
 
@@ -96,7 +98,7 @@
   vars:
     question: "Que doit faire une entreprise lorsqu'un incident de confidentialité présente un risque de préjudice sérieux ?"
     role: public
-    expected_sources: ["public/loi-25/art-3.5.md"]
+    expected_sources: "public/loi-25/art-3.5.md"
     reference: "Aviser avec diligence la Commission d'accès à l'information et toute personne dont un renseignement personnel est concerné, en plus de prendre les mesures raisonnables pour diminuer les risques de préjudice et éviter de nouveaux incidents."
   assert: *answerable
 
@@ -105,7 +107,7 @@
   vars:
     question: "Quels facteurs faut-il considérer pour évaluer le risque qu'un préjudice soit causé après un incident de confidentialité ?"
     role: public
-    expected_sources: ["public/loi-25/art-3.7.md"]
+    expected_sources: "public/loi-25/art-3.7.md"
     reference: "La sensibilité du renseignement, les conséquences appréhendées de son utilisation et la probabilité qu'il soit utilisé à des fins préjudiciables ; le responsable de la protection des renseignements personnels doit être consulté."
   assert: *answerable
 
@@ -114,7 +116,7 @@
   vars:
     question: "Une entreprise doit-elle tenir un registre des incidents de confidentialité ?"
     role: public
-    expected_sources: ["public/loi-25/art-3.8.md"]
+    expected_sources: "public/loi-25/art-3.8.md"
     reference: "Oui, et une copie du registre est transmise à la Commission d'accès à l'information sur demande."
   assert: *answerable
 
@@ -123,7 +125,7 @@
   vars:
     question: "Que doit faire une entreprise avant de recueillir des renseignements personnels sur autrui ?"
     role: public
-    expected_sources: ["public/loi-25/art-4.md", "public/loi-25/art-5.md"]
+    expected_sources: "public/loi-25/art-4.md, public/loi-25/art-5.md"
     reference: "Déterminer les fins de la collecte (et ne recueillir ensuite que les renseignements nécessaires à ces fins)."
   assert: *answerable
 
@@ -132,7 +134,7 @@
   vars:
     question: "De quoi une entreprise doit-elle informer une personne lorsqu'elle recueille ses renseignements personnels ?"
     role: public
-    expected_sources: ["public/loi-25/art-8.md"]
+    expected_sources: "public/loi-25/art-8.md"
     reference: "Des fins de la collecte, des moyens utilisés, des droits d'accès et de rectification, et du droit de retirer son consentement."
   assert: *answerable
 
@@ -141,7 +143,7 @@
   vars:
     question: "Quelles informations supplémentaires faut-il donner lorsque la collecte utilise une technologie permettant d'identifier, de localiser ou de profiler une personne ?"
     role: public
-    expected_sources: ["public/loi-25/art-8.1.md"]
+    expected_sources: "public/loi-25/art-8.1.md"
     reference: "Informer au préalable du recours à une telle technologie et des moyens offerts pour activer les fonctions d'identification, de localisation ou de profilage."
   assert: *answerable
 
@@ -150,7 +152,7 @@
   vars:
     question: "Une entreprise qui recueille des renseignements personnels par un moyen technologique doit-elle publier une politique de confidentialité ?"
     role: public
-    expected_sources: ["public/loi-25/art-8.2.md"]
+    expected_sources: "public/loi-25/art-8.2.md"
     reference: "Oui, une politique rédigée en termes simples et clairs, publiée sur son site Internet, avec un avis pour toute modification."
   assert: *answerable
 
@@ -159,7 +161,7 @@
   vars:
     question: "Quel niveau de confidentialité les paramètres par défaut d'un produit ou service technologique doivent-ils assurer ?"
     role: public
-    expected_sources: ["public/loi-25/art-9.1.md"]
+    expected_sources: "public/loi-25/art-9.1.md"
     reference: "Le plus haut niveau de confidentialité, par défaut et sans intervention de la personne concernée (les témoins de connexion ne sont pas visés)."
   assert: *answerable
 
@@ -168,7 +170,7 @@
   vars:
     question: "Quelles sont les qualités d'un consentement valide selon la Loi 25 ?"
     role: public
-    expected_sources: ["public/loi-25/art-14.md"]
+    expected_sources: "public/loi-25/art-14.md"
     reference: "Il doit être manifeste, libre, éclairé et donné à des fins spécifiques, demandé pour chaque fin en termes simples et clairs."
   assert: *answerable
 
@@ -177,7 +179,7 @@
   vars:
     question: "Qui donne le consentement pour un mineur de moins de 14 ans ?"
     role: public
-    expected_sources: ["public/loi-25/art-14.md", "public/loi-25/art-4.1.md"]
+    expected_sources: "public/loi-25/art-14.md, public/loi-25/art-4.1.md"
     reference: "Le titulaire de l'autorité parentale ou le tuteur."
   assert: *answerable
 
@@ -186,7 +188,7 @@
   vars:
     question: "Dans quels cas une entreprise peut-elle utiliser un renseignement personnel à une autre fin que celle de sa collecte sans le consentement de la personne ?"
     role: public
-    expected_sources: ["public/loi-25/art-12.md"]
+    expected_sources: "public/loi-25/art-12.md"
     reference: "Seulement si la fin est compatible avec la collecte, si l'utilisation est manifestement au bénéfice de la personne, si elle est nécessaire à la prévention et à la détection de la fraude ou à la sécurité, si elle est nécessaire à la fourniture d'un produit ou service demandé, ou à des fins d'étude ou de statistiques avec des renseignements dépersonnalisés."
   assert: *answerable
 
@@ -195,7 +197,7 @@
   vars:
     question: "La prospection commerciale peut-elle être considérée comme une fin compatible avec celle de la collecte ?"
     role: public
-    expected_sources: ["public/loi-25/art-12.md"]
+    expected_sources: "public/loi-25/art-12.md"
     reference: "Non, la prospection commerciale ou philanthropique ne peut pas être considérée comme une fin compatible."
   assert: *answerable
 
@@ -204,7 +206,7 @@
   vars:
     question: "Quelles obligations a une entreprise qui rend une décision fondée exclusivement sur un traitement automatisé de renseignements personnels ?"
     role: public
-    expected_sources: ["public/loi-25/art-12.1.md"]
+    expected_sources: "public/loi-25/art-12.1.md"
     reference: "Informer la personne au plus tard au moment de la décision ; sur demande, lui indiquer les renseignements utilisés, les raisons et principaux facteurs de la décision, et son droit de rectification ; lui donner l'occasion de présenter ses observations à un membre du personnel pouvant réviser la décision."
   assert: *answerable
 
@@ -213,7 +215,7 @@
   vars:
     question: "Une entreprise peut-elle communiquer à un tiers les renseignements personnels qu'elle détient ?"
     role: public
-    expected_sources: ["public/loi-25/art-13.md"]
+    expected_sources: "public/loi-25/art-13.md"
     reference: "Non, sauf avec le consentement de la personne concernée ou dans les cas prévus par la loi ; le consentement doit être exprès pour un renseignement sensible."
   assert: *answerable
 
@@ -222,7 +224,7 @@
   vars:
     question: "Que doit faire une entreprise avant de communiquer un renseignement personnel à l'extérieur du Québec ?"
     role: public
-    expected_sources: ["public/loi-25/art-17.md"]
+    expected_sources: "public/loi-25/art-17.md"
     reference: "Procéder à une évaluation des facteurs relatifs à la vie privée tenant compte de la sensibilité du renseignement, de la finalité, des mesures de protection et du régime juridique de l'État destinataire ; la communication doit faire l'objet d'une entente écrite."
   assert: *answerable
 
@@ -231,7 +233,7 @@
   vars:
     question: "Quelles conditions s'appliquent lorsqu'une entreprise confie des renseignements personnels à un sous-traitant ou mandataire ?"
     role: public
-    expected_sources: ["public/loi-25/art-18.3.md"]
+    expected_sources: "public/loi-25/art-18.3.md"
     reference: "Le mandat ou contrat doit être écrit et indiquer les mesures de protection à prendre, limiter l'utilisation à l'exécution du contrat et interdire la conservation après son expiration ; le mandataire doit aviser sans délai le responsable de toute violation."
   assert: *answerable
 
@@ -240,7 +242,7 @@
   vars:
     question: "Quels employés d'une entreprise peuvent accéder à un renseignement personnel sans le consentement de la personne concernée ?"
     role: public
-    expected_sources: ["public/loi-25/art-20.md"]
+    expected_sources: "public/loi-25/art-20.md"
     reference: "Seulement les préposés ou agents qui ont qualité pour le connaître, à condition que le renseignement soit nécessaire à l'exercice de leurs fonctions."
   assert: *answerable
 
@@ -249,7 +251,7 @@
   vars:
     question: "Que doit faire une entreprise des renseignements personnels lorsque les fins de leur collecte sont accomplies ?"
     role: public
-    expected_sources: ["public/loi-25/art-23.md"]
+    expected_sources: "public/loi-25/art-23.md"
     reference: "Les détruire ou les anonymiser, sous réserve d'un délai de conservation prévu par une loi."
   assert: *answerable
 
@@ -258,7 +260,7 @@
   vars:
     question: "Dans quel délai le responsable de la protection des renseignements personnels doit-il répondre à une demande d'accès ou de rectification ?"
     role: public
-    expected_sources: ["public/loi-25/art-32.md"]
+    expected_sources: "public/loi-25/art-32.md"
     reference: "Par écrit, avec diligence et au plus tard dans les 30 jours de la réception de la demande ; sans réponse dans ce délai, la demande est réputée refusée."
   assert: *answerable
 
@@ -267,7 +269,7 @@
   vars:
     question: "Quelles conditions une demande d'accès ou de rectification doit-elle respecter pour être considérée ?"
     role: public
-    expected_sources: ["public/loi-25/art-30.md"]
+    expected_sources: "public/loi-25/art-30.md"
     reference: "Elle doit être faite par écrit par une personne justifiant de son identité, et adressée au responsable de la protection des renseignements personnels."
   assert: *answerable
 
@@ -276,7 +278,7 @@
   vars:
     question: "Que doit indiquer le responsable lorsqu'il refuse une demande d'accès ?"
     role: public
-    expected_sources: ["public/loi-25/art-34.md"]
+    expected_sources: "public/loi-25/art-34.md"
     reference: "Les motifs du refus, la disposition de la loi sur laquelle il s'appuie, les recours offerts et le délai pour les exercer."
   assert: *answerable
 
@@ -285,7 +287,7 @@
   vars:
     question: "Dans quels cas une personne peut-elle exiger la rectification d'un renseignement personnel la concernant ?"
     role: public
-    expected_sources: ["public/loi-25/art-28.md"]
+    expected_sources: "public/loi-25/art-28.md"
     reference: "Si le renseignement est inexact, incomplet ou équivoque, ou si sa collecte, sa communication ou sa conservation ne sont pas autorisées par la loi."
   assert: *answerable
 
@@ -294,7 +296,7 @@
   vars:
     question: "Quel recours a une personne en cas de mésentente avec une entreprise sur l'accès ou la rectification de ses renseignements personnels ?"
     role: public
-    expected_sources: ["public/loi-25/art-42.md"]
+    expected_sources: "public/loi-25/art-42.md"
     reference: "Soumettre une demande d'examen de mésentente à la Commission d'accès à l'information."
   assert: *answerable
 
@@ -303,7 +305,7 @@
   vars:
     question: "Quelle est l'amende maximale encourue par une entreprise qui commet une infraction à la Loi 25 ?"
     role: public
-    expected_sources: ["public/loi-25/art-91.md"]
+    expected_sources: "public/loi-25/art-91.md"
     reference: "25 000 000 $ ou 4 % du chiffre d'affaires mondial de l'exercice précédent si ce montant est plus élevé (de 5 000 $ à 100 000 $ pour une personne physique)."
   assert: *answerable
 
@@ -312,7 +314,7 @@
   vars:
     question: "Quel est le montant maximal d'une sanction administrative pécuniaire ?"
     role: public
-    expected_sources: ["public/loi-25/art-90.12.md"]
+    expected_sources: "public/loi-25/art-90.12.md"
     reference: "50 000 $ pour une personne physique et, dans les autres cas, 10 000 000 $ ou 2 % du chiffre d'affaires mondial de l'exercice précédent si ce montant est plus élevé."
   assert: *answerable
 
@@ -321,7 +323,7 @@
   vars:
     question: "Chez Énergie Boréale, à quelle adresse puis-je demander l'accès à mon dossier et dans quel délai répond-on ?"
     role: public
-    expected_sources: ["public/faq-clients.md", "public/politique-confidentialite.md"]
+    expected_sources: "public/faq-clients.md, public/politique-confidentialite.md"
     reference: "À l'adresse protection@energie-boreale.example ; la réponse est donnée dans un délai de 30 jours."
   assert: *answerable
 
@@ -330,7 +332,7 @@
   vars:
     question: "Énergie Boréale vend-elle les renseignements personnels de ses clients ?"
     role: public
-    expected_sources: ["public/faq-clients.md"]
+    expected_sources: "public/faq-clients.md"
     reference: "Non, jamais ; les renseignements ne sont communiqués qu'à des sous-traitants sous contrat écrit lorsque c'est nécessaire au service, ou lorsque la loi l'exige."
   assert: *answerable
 
@@ -339,7 +341,7 @@
   vars:
     question: "Chez Énergie Boréale, les fonctions d'identification, de localisation ou de profilage des services numériques sont-elles activées par défaut ?"
     role: public
-    expected_sources: ["public/politique-confidentialite.md"]
+    expected_sources: "public/politique-confidentialite.md"
     reference: "Non, elles sont désactivées par défaut."
   assert: *answerable
 
