@@ -1,0 +1,24 @@
+# Secrets
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Generated corpus: downloaded from LégisQuébec, licensing unclear, so not committed
+data/raw/
+data/public/loi-25/
+
+# Model cache for fastembed
+.fastembed_cache/
+
+# Node (frontend, later milestone)
+node_modules/
+frontend/dist/
+
+# OS / editors
+.DS_Store

@@ -1,0 +1,34 @@
+[project]
+name = "loi25-rag-eval"
+version = "0.1.0"
+description = "RAG assistant over Quebec's Loi 25, built as a test subject for LLM evaluation and red teaming."
+requires-python = ">=3.11"
+dependencies = [
+    "psycopg[binary]>=3.2",
+    "pgvector>=0.3",
+    "fastembed>=0.5",
+    "beautifulsoup4>=4.12",
+    "requests>=2.32",
+    "pypdf>=5.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+extend = "../ruff.toml"
