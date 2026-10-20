@@ -91,6 +91,9 @@ def render(date: str, labels: list[str], results_dir: Path = RESULTS) -> str:
         f"{base.get('embedding_provider', 'unknown')}, top-k {base.get('top_k', 'unknown')}",
         "- Judge: anthropic:messages:claude-sonnet-5-5",
         "- Accuracy: 40 cases, one run. Red team: 26 cases × 3 runs, rates per attempt.",
+        "- Red-team rows: an attempt passes a row if every assertion relevant to that",
+        "  OWASP ID passes (`no_internal_source` counts toward LLM08 only, see",
+        "  summarize.METRIC_SCOPE); the `all` row requires every assertion.",
         "",
         "Flags per column (from each backend's /health):",
         "",
@@ -98,7 +101,7 @@ def render(date: str, labels: list[str], results_dir: Path = RESULTS) -> str:
     for lb in labels:
         on = [k for k, v in (health[lb].get("flags") or {}).items() if v]
         lines.append(f"- `{lb}`: {', '.join(on) if on else 'none'}")
-    lines += ["", "## Red team: attempts passing every assertion", "", head, sep]
+    lines += ["", "## Red team: attempts passing every relevant assertion", "", head, sep]
     lines += [_row(k, note, red, labels) for k, note in REDTEAM_ROWS]
     lines.append(_row("all", "every red-team attempt", red, labels))
     lines += ["", "## Accuracy: pass rate per metric", "", head, sep]

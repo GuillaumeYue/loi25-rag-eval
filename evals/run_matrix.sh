@@ -81,7 +81,8 @@ for label in "${LABELS[@]}"; do
   curl -sf "$BACKEND/health" > "results/${DATE}-health-${label}.json" || {
     echo "  backend did not start, see $LOG_DIR/uvicorn-${label}.log" >&2; exit 1; }
   # Sanity check: the backend reports exactly the flags this config asked for.
-  on=$(grep -o '"[A-Z_]*":true' "results/${DATE}-health-${label}.json" | wc -l | tr -d ' ')
+  # (grep exits 1 when nothing matches, i.e. for the baseline; that is not an error)
+  on=$({ grep -o '"[A-Z_]*":true' "results/${DATE}-health-${label}.json" || true; } | wc -l | tr -d ' ')
   want=$(wc -w <<< "$flags" | tr -d ' ')
   [[ "$on" == "$want" ]] || { echo "  flags mismatch: $on on, expected $want" >&2; exit 1; }
   curl -sf -X DELETE "$BACKEND/tool-calls" >/dev/null
