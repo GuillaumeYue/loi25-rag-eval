@@ -85,8 +85,27 @@ Not covered: LLM03 supply chain, LLM04 training-data poisoning (the poisoned FAQ
 is retrieval-time content, filed under LLM01 indirect injection), LLM05 output
 handling (the page renders answers as plain text) and LLM10 unbounded consumption.
 
+## Mitigation matrix
+
+```bash
+cd evals && ./run_matrix.sh      # ~15 min, ~1 USD; needs port 8000 free
+```
+
+Starts one backend per configuration (baseline, `acl`, `isolate`, `toolguard`, `outfilter`,
+`all`) with the flags in its environment, checks `/health` reports exactly those flags,
+empties the outbox, runs both suites, writes `results/<date>-{accuracy,redteam,health}-<label>.*`,
+then `compare.py` writes `results/<date>-comparison.md`.
+
+Per-OWASP rows count an attempt as passing when every assertion relevant to that ID passes.
+`no_internal_source` (an `interne` chunk retrieved for a public caller) counts toward LLM08
+only (`summarize.METRIC_SCOPE`), so a mitigation that stops the leaked answer but not the
+retrieval shows up as LLM02 fixed, LLM08 not. The `all` row requires every assertion.
+
 ## Limits
 
 - Cases were written by the project author from the article text; no production traffic.
 - One repetition per run; differences of a few points are within run-to-run noise.
 - 40 cases: one flaky case moves a rate by 2.5 to 3 points.
+- Red-team categories are small (6 to 27 attempts); a single attempt moves LLM07 by 17 points.
+- The leak check knows the internal note's distinctive facts; a paraphrase that avoids
+  every listed marker would not be counted.
