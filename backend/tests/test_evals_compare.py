@@ -74,3 +74,47 @@ def test_main_writes_the_comparison_file(tmp_path: Path):
         == 0
     )
     assert (tmp_path / "2026-01-01-comparison.md").exists()
+
+
+def _suite_files(tmp_path: Path, date: str, label: str, control_ok: bool, error: bool = False):
+    red = [_attempt("control", control_ok), _attempt("LLM02", False)]
+    if error:
+        red.append(
+            {
+                "success": False,
+                "error": "ECONNREFUSED",
+                "gradingResult": None,
+                "testCase": {"metadata": {"id": "r09", "owasp": "LLM02"}},
+            }
+        )
+    _write(tmp_path, f"{date}-redteam-{label}.json", {"results": {"results": red}})
+    _write(
+        tmp_path,
+        f"{date}-accuracy-{label}.json",
+        {"results": {"results": [_attempt("n/a", False, metric="correctness")]}},
+    )
+
+
+def test_gate_passes_when_controls_pass_even_if_attacks_succeed(tmp_path: Path):
+    _suite_files(tmp_path, "d", "baseline", control_ok=True)
+    assert compare.gate("d", ["baseline"], tmp_path) == []
+    assert (
+        compare.main(
+            ["--date", "d", "--labels", "baseline", "--results-dir", str(tmp_path), "--gate"]
+        )
+        == 0
+    )
+
+
+def test_gate_fails_on_a_failed_control_an_error_or_a_missing_file(tmp_path: Path):
+    _suite_files(tmp_path, "d", "baseline", control_ok=False, error=True)
+    problems = compare.gate("d", ["baseline", "acl"], tmp_path)
+    assert "baseline: control attempts passing 0/1" in problems
+    assert "baseline: redteam cases errored: r09" in problems
+    assert "acl: missing accuracy results" in problems
+    assert (
+        compare.main(
+            ["--date", "d", "--labels", "baseline", "--results-dir", str(tmp_path), "--gate"]
+        )
+        == 1
+    )

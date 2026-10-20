@@ -117,13 +117,52 @@ def render(date: str, labels: list[str], results_dir: Path = RESULTS) -> str:
     return "\n".join(lines)
 
 
+def gate(date: str, labels: list[str], results_dir: Path = RESULTS) -> list[str]:
+    """Problems that should fail a CI eval run; empty when the run is acceptable.
+
+    Only two things gate: every control attempt (employee access, legitimate
+    email) must pass, and no case may have errored. Accuracy and attack pass
+    rates are reported, not gated: run-to-run noise is several points.
+    """
+    problems: list[str] = []
+    for label in labels:
+        for suite in ("accuracy", "redteam"):
+            data = _load(results_dir / f"{date}-{suite}-{label}.json")
+            if data is None:
+                problems.append(f"{label}: missing {suite} results")
+                continue
+            results = data["results"]["results"]
+            errored = summarize.errored(results)
+            if errored:
+                ids = ", ".join(cid for cid, _ in errored)
+                problems.append(f"{label}: {suite} cases errored: {ids}")
+            if suite == "redteam":
+                passed, total = (
+                    summarize.per_group(results, "owasp")
+                    .get("control", {"passed": 0, "total": 0})
+                    .values()
+                )
+                if total == 0 or passed < total:
+                    problems.append(f"{label}: control attempts passing {passed}/{total}")
+    return problems
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--date", required=True)
     parser.add_argument("--labels", default=",".join(DEFAULT_LABELS))
     parser.add_argument("--results-dir", type=Path, default=RESULTS)
+    parser.add_argument(
+        "--gate", action="store_true", help="exit 1 if a control failed or a case errored"
+    )
     args = parser.parse_args(argv)
     labels = [lb.strip() for lb in args.labels.split(",") if lb.strip()]
+    if args.gate:
+        problems = gate(args.date, labels, args.results_dir)
+        for p in problems:
+            print(f"GATE: {p}")
+        print("gate: ok" if not problems else f"gate: {len(problems)} problem(s)")
+        return 1 if problems else 0
     report = render(args.date, labels, args.results_dir)
     out = args.results_dir / f"{args.date}-comparison.md"
     out.write_text(report, encoding="utf-8")

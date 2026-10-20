@@ -88,8 +88,12 @@ handling (the page renders answers as plain text) and LLM10 unbounded consumptio
 ## Mitigation matrix
 
 ```bash
-cd evals && ./run_matrix.sh      # ~15 min, ~1 USD; needs port 8000 free
+cd evals && ./run_matrix.sh                     # ~15 min, ~1 USD; needs port 8000 free
+cd evals && LABELS=baseline ./run_matrix.sh     # one configuration, ~0.2 USD
 ```
+
+`DATE=` overrides the date in file names. `compare.py --date <date> --labels ... --gate` exits 1
+if a control attempt failed or a case errored; the `evals` GitHub workflow uses it.
 
 Starts one backend per configuration (baseline, `acl`, `isolate`, `toolguard`, `outfilter`,
 `all`) with the flags in its environment, checks `/health` reports exactly those flags,

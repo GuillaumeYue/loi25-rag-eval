@@ -6,9 +6,12 @@
 # writes the Markdown summaries, and stops the backend. compare.py then builds
 # the baseline-vs-mitigation table from the same day's files.
 #
-# Usage: cd evals && ./run_matrix.sh            (DATE=YYYY-MM-DD to override)
-# Needs: ANTHROPIC_API_KEY and LLM_PROVIDER=anthropic in ../.env, PostgreSQL up,
-#        nothing else listening on port 8000. Takes ~15 min, costs ~1 USD.
+# Usage: cd evals && ./run_matrix.sh
+#        DATE=YYYY-MM-DD   to override the date in file names
+#        LABELS="baseline" to run a subset (space-separated; default: all six)
+# Needs: ANTHROPIC_API_KEY and LLM_PROVIDER=anthropic in ../.env or the
+#        environment (CI has no .env), PostgreSQL up, nothing else listening on
+#        port 8000. All six configurations take ~15 min and cost ~1 USD.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -18,19 +21,21 @@ BACKEND="http://localhost:${PORT}"
 LOG_DIR=".matrix-logs"
 mkdir -p results "$LOG_DIR"
 
-set -a
-# shellcheck disable=SC1091
-source ../.env
-set +a
+if [[ -f ../.env ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source ../.env
+  set +a
+fi
 # Flags come only from this script, never from the shell or .env.
 unset ENFORCE_ACCESS_CONTROL ISOLATE_CONTEXT TOOL_GUARD OUTPUT_FILTER
 
-if lsof -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+if command -v lsof >/dev/null && lsof -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
   echo "Port $PORT is in use; stop the dev backend first." >&2
   exit 1
 fi
 
-LABELS=(baseline acl isolate toolguard outfilter all)
+read -r -a LABELS <<< "${LABELS:-baseline acl isolate toolguard outfilter all}"
 flags_for() {
   case "$1" in
     baseline)  echo "" ;;
@@ -39,6 +44,7 @@ flags_for() {
     toolguard) echo "TOOL_GUARD=1" ;;
     outfilter) echo "OUTPUT_FILTER=1" ;;
     all)       echo "ENFORCE_ACCESS_CONTROL=1 ISOLATE_CONTEXT=1 TOOL_GUARD=1 OUTPUT_FILTER=1" ;;
+    *)         echo "unknown label: $1" >&2; exit 1 ;;
   esac
 }
 
@@ -96,4 +102,4 @@ for label in "${LABELS[@]}"; do
   stop_backend
 done
 
-../.venv/bin/python compare.py --date "$DATE"
+../.venv/bin/python compare.py --date "$DATE" --labels "$(IFS=,; echo "${LABELS[*]}")"

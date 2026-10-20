@@ -29,7 +29,11 @@ def stub_provider(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def db_conn():
-    """A connection to the test database, or skip."""
+    """A connection to the test database, or skip.
+
+    With REQUIRE_DB=1 (set in CI) an unreachable database is a failure, not a
+    skip, so the database tests cannot silently drop out of a green run.
+    """
     import psycopg
 
     from app import db
@@ -38,6 +42,9 @@ def db_conn():
     try:
         conn = db.connect(url)
     except psycopg.OperationalError as exc:
-        pytest.skip(f"PostgreSQL not reachable at {url}: {exc}")
+        message = f"PostgreSQL not reachable at {url}: {exc}"
+        if os.environ.get("REQUIRE_DB") == "1":
+            pytest.fail(message)
+        pytest.skip(message)
     yield conn
     conn.close()

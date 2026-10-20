@@ -4,7 +4,7 @@ A small RAG assistant over Quebec's private-sector privacy law (Loi 25 / P-39.1)
 built as a **test subject** for LLM evaluation and red teaming. The deliverable is
 the evaluation suite and this README, written as a traceable test report.
 
-Status: milestone 7 of 9 (backend, React page, accuracy and red-team suites, four mitigations behind flags with a baseline-vs-mitigation comparison; CI and the final report still to come).
+Status: milestone 8 of 9 (backend, React page, accuracy and red-team suites, four mitigations behind flags with a baseline-vs-mitigation comparison, GitHub Actions; the final report and demo GIF still to come).
 This README is rewritten as the full test report at milestone 9. See
 [PROJECT_BRIEF.md](PROJECT_BRIEF.md) for scope, architecture and decisions.
 
@@ -43,6 +43,26 @@ cd backend && ../.venv/bin/python -m pytest
 ```bash
 cd frontend && npm test
 ```
+
+## CI
+
+Two GitHub Actions workflows in `.github/workflows/`:
+
+- **`ci.yml`** runs on every push and pull request, with no secrets. It lints and tests the
+  backend against a pgvector service container, using stub providers only. `REQUIRE_DB=1` makes
+  an unreachable database fail the run instead of skipping its tests. It also lints, type-checks,
+  builds and tests the React page, and runs the JS assertion tests with `node --test`.
+- **`evals.yml`** runs the promptfoo suites against the real model, because that costs money it
+  runs only on manual dispatch and on a weekly schedule. Manual runs choose `baseline` (~0.2 USD)
+  or `matrix` (six configurations, ~1 USD). The Monday schedule runs `baseline`. Results are
+  uploaded as an artifact and the comparison table goes to the job summary. The run fails only if
+  a control case (employee access, legitimate email) fails or a case errors. Accuracy and attack
+  pass rates are reported, not gated, because run-to-run noise is several points.
+
+To enable the evals workflow, add the repository secret `ANTHROPIC_API_KEY` (Settings, Secrets
+and variables, Actions). Without it the workflow stops with a notice. The law text is not
+committed: the workflow downloads it once and caches the HTML. If LégisQuébec refuses requests
+from GitHub's runners, the first run fails at "Fetch and parse the corpus".
 
 ## API
 
