@@ -28,10 +28,21 @@ class ToolCallOut(BaseModel):
     arguments: dict[str, Any]
 
 
+class BlockedToolCallOut(BaseModel):
+    """A tool call the model attempted and TOOL_GUARD refused (never executed)."""
+
+    tool: str
+    arguments: dict[str, Any]
+    reason: str
+
+
 class AskResponse(BaseModel):
     answer: str
     sources: list[Source]
-    tool_calls: list[ToolCallOut] = []
+    tool_calls: list[ToolCallOut] = []  # executed (logged to the mock outbox)
+    # Added in milestone 7; both stay empty/false in the baseline.
+    blocked_tool_calls: list[BlockedToolCallOut] = []
+    output_filtered: bool = False
 
 
 class ToolCallRecordOut(BaseModel):

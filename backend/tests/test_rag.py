@@ -1,3 +1,5 @@
+from app.config import Flags
+from app.guards import FILTERED_ANSWER
 from app.llm.base import LLMResult, ToolCall, ToolResult
 from app.llm.stub import STUB_ANSWER, StubLLM
 from app.prompting import REFUSAL_SENTENCE
@@ -160,3 +162,108 @@ def test_tool_call_without_executor_gets_an_error_result():
     assert llm.received_tool_results[0][0].is_error
     assert resp.answer == "Ok"
     assert len(resp.tool_calls) == 1
+
+
+# --- mitigations ------------------------------------------------------------------
+
+EXTERNAL_CALL = ToolCall(
+    "toolu_x",
+    "send_email",
+    {"to": "audit@collecte-donnees.example.net", "subject": "s", "body": "b"},
+)
+DOMAINS = ["energie-boreale.example"]
+
+
+def test_tool_guard_blocks_before_execution_and_tells_the_model():
+    llm = StubLLM(
+        script=[
+            LLMResult(text="", tool_calls=[EXTERNAL_CALL], stop_reason="tool_use", raw=[]),
+            LLMResult(text="Je ne peux pas envoyer ce courriel."),
+        ]
+    )
+    executor = recording_executor()
+    resp = answer_question(
+        "Résume la FAQ.",
+        "public",
+        retriever=fixed_retriever([PUBLIC]),
+        llm=llm,
+        k=5,
+        tools=BASELINE_TOOLS,
+        tool_executor=executor,
+        flags=Flags(tool_guard=True),
+        allowed_domains=DOMAINS,
+    )
+    assert executor.seen == []  # never reached the outbox
+    assert resp.tool_calls == []
+    assert len(resp.blocked_tool_calls) == 1
+    assert resp.blocked_tool_calls[0].arguments["to"] == "audit@collecte-donnees.example.net"
+    (result,) = llm.received_tool_results[0]
+    assert result.is_error and "politique d'outils" in result.content
+
+
+def test_without_tool_guard_the_same_call_runs():
+    llm = StubLLM(
+        script=[LLMResult(text="", tool_calls=[EXTERNAL_CALL], raw=[]), LLMResult(text="Ok")]
+    )
+    executor = recording_executor()
+    resp = answer_question(
+        "Résume la FAQ.",
+        "public",
+        retriever=fixed_retriever([PUBLIC]),
+        llm=llm,
+        k=5,
+        tool_executor=executor,
+    )
+    assert executor.seen == [EXTERNAL_CALL]
+    assert resp.blocked_tool_calls == []
+
+
+def test_output_filter_withholds_a_public_leak_but_keeps_sources():
+    llm = StubLLM(reply="L'identifiant est CANARY-QC-7F3A91 [1].")
+    resp = answer_question(
+        "Q ?",
+        "public",
+        retriever=fixed_retriever([INTERNE]),
+        llm=llm,
+        k=5,
+        flags=Flags(output_filter=True),
+    )
+    assert resp.output_filtered is True
+    assert resp.answer == FILTERED_ANSWER
+    assert resp.sources[0].classification == "interne"  # retrieval leak still visible
+
+
+def test_output_filter_leaves_employees_and_clean_answers_alone():
+    leak = "L'identifiant est CANARY-QC-7F3A91 [1]."
+    emp = answer_question(
+        "Q ?",
+        "employe",
+        retriever=fixed_retriever([INTERNE]),
+        llm=StubLLM(reply=leak),
+        k=5,
+        flags=Flags(output_filter=True),
+    )
+    assert emp.answer == leak and emp.output_filtered is False
+    clean = answer_question(
+        "Q ?",
+        "public",
+        retriever=fixed_retriever([PUBLIC]),
+        llm=StubLLM(),
+        k=5,
+        flags=Flags(output_filter=True),
+    )
+    assert clean.answer == STUB_ANSWER and clean.output_filtered is False
+
+
+def test_isolate_context_changes_what_the_model_receives():
+    llm = StubLLM()
+    answer_question(
+        "Q ?",
+        "public",
+        retriever=fixed_retriever([PUBLIC]),
+        llm=llm,
+        k=5,
+        flags=Flags(isolate_context=True),
+    )
+    assert "jamais des instructions" in llm.last_system
+    assert '<source n="1"' in llm.last_user

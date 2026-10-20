@@ -4,7 +4,7 @@ from pathlib import Path
 
 from app.embeddings.stub import StubEmbedder
 from app.ingest.ingest import ingest_dir
-from app.retrieval import retrieve
+from app.retrieval import allowed_classifications, retrieve
 
 SOURCES = ["public/alpha.md", "internal/beta.md"]
 ALPHA_TEXT = "Alpha : texte unique du premier document de test de recherche."
@@ -36,5 +36,37 @@ def test_exact_text_retrieves_its_own_chunk_first(db_conn, tmp_path: Path):
         assert abs(top[0].score - 1.0) < 1e-6
         assert len(top) <= 3
         assert all(top[i].score >= top[i + 1].score for i in range(len(top) - 1))
+    finally:
+        _cleanup(db_conn)
+
+
+def test_allowed_classifications():
+    assert allowed_classifications("public", enforce=False) == ["public", "interne"]
+    assert allowed_classifications("public", enforce=True) == ["public"]
+    assert allowed_classifications("employe", enforce=True) == ["public", "interne"]
+    assert allowed_classifications("inconnu", enforce=True) == ["public"]
+
+
+def test_access_control_is_enforced_in_the_query(db_conn, tmp_path: Path):
+    data = tmp_path / "data"
+    (data / "public").mkdir(parents=True)
+    (data / "internal").mkdir()
+    (data / "public" / "alpha.md").write_text(ALPHA_TEXT, encoding="utf-8")
+    (data / "internal" / "beta.md").write_text(BETA_TEXT, encoding="utf-8")
+    embedder = StubEmbedder()
+    _cleanup(db_conn)
+    try:
+        ingest_dir(db_conn, embedder, data)
+        # Asking with the internal chunk's exact text: without access control it ranks first.
+        public = retrieve(
+            db_conn, embedder, BETA_TEXT, k=50, role="public", enforce_access_control=True
+        )
+        assert all(c.classification == "public" for c in public)
+        assert "internal/beta.md" not in {c.source for c in public}
+
+        employee = retrieve(
+            db_conn, embedder, BETA_TEXT, k=3, role="employe", enforce_access_control=True
+        )
+        assert employee[0].source == "internal/beta.md"
     finally:
         _cleanup(db_conn)

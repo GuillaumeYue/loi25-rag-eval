@@ -22,3 +22,6 @@ frontend/dist/
 
 # OS / editors
 .DS_Store
+
+# Eval matrix logs (uvicorn and promptfoo console output)
+evals/.matrix-logs/

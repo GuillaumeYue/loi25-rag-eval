@@ -25,8 +25,15 @@ class Services:
     embedder: Embedder
     llm: LLMProvider
 
-    def retriever(self, question: str, k: int, role: str):
-        return retrieve(self.conn, self.embedder, question, k, role)
+    def retriever(self, question: str, k: int, role: str, *, enforce_access_control: bool = False):
+        return retrieve(
+            self.conn,
+            self.embedder,
+            question,
+            k,
+            role,
+            enforce_access_control=enforce_access_control,
+        )
 
     def execute_tool(self, call: ToolCall) -> ToolResult:
         return tools.execute_tool(self.conn, call)
@@ -45,7 +52,7 @@ def get_services() -> Services:
 
 ServicesDep = Annotated[Services, Depends(get_services)]
 
-app = FastAPI(title="loi25-rag-eval", version="0.3.0")
+app = FastAPI(title="loi25-rag-eval", version="0.4.0")
 
 
 @app.get("/health")
@@ -57,22 +64,30 @@ def health() -> dict[str, object]:
         "model": config.anthropic_model() if config.llm_provider() == "anthropic" else None,
         "embedding_provider": config.embedding_provider(),
         "top_k": config.top_k(),
-        # Mitigation flags arrive in milestone 7; an empty dict means "baseline".
-        "flags": {},
+        "flags": config.flags().as_env(),
     }
 
 
 @app.post("/ask", response_model=AskResponse)
 def ask(body: AskRequest, services: ServicesDep) -> AskResponse:
+    flags = config.flags()
+
+    def retriever(question: str, k: int, role: str):
+        return services.retriever(
+            question, k, role, enforce_access_control=flags.enforce_access_control
+        )
+
     try:
         return answer_question(
             body.question,
             body.role,
-            retriever=services.retriever,
+            retriever=retriever,
             llm=services.llm,
             k=config.top_k(),
             tools=tools.BASELINE_TOOLS,
             tool_executor=services.execute_tool,
+            flags=flags,
+            allowed_domains=config.tool_allowed_domains(),
         )
     except LLMError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc

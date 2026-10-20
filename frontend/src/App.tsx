@@ -45,9 +45,15 @@ export default function App() {
 
       {response && (
         <>
+          {response.output_filtered && (
+            <div role="status" className="notice">
+              Filtre de sortie : la réponse générée a été retenue parce qu'elle contenait
+              des renseignements internes.
+            </div>
+          )}
           <AnswerView answer={response.answer} />
           <SourceList sources={response.sources} cited={citedNumbers(response.answer)} />
-          <ToolCallList toolCalls={response.tool_calls} />
+          <ToolCallList toolCalls={response.tool_calls} blocked={response.blocked_tool_calls} />
         </>
       )}
     </main>

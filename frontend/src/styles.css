@@ -100,3 +100,14 @@ button:disabled { opacity: 0.5; cursor: default; }
 }
 .tool-name { font-weight: 700; color: var(--warn-ink); font-family: ui-monospace, monospace; }
 .tool-call pre { margin: 6px 0 0; white-space: pre-wrap; font-size: 0.85rem; }
+
+.notice {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background: #fff7e0;
+  color: #7a5a00;
+  border-radius: 6px;
+}
+.tool-call.blocked { border-style: dashed; border-color: var(--muted); }
+.tool-call.blocked .tool-name { color: var(--muted); text-decoration: line-through; }
+.blocked-label { margin-left: 8px; font-size: 0.85rem; color: var(--muted); }

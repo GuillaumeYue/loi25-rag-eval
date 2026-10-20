@@ -25,7 +25,8 @@ class FakeServices(Services):
             ToolCallRecord(1, "send_email", {"to": "a@x.example"}, datetime(2026, 10, 19, 11, 0)),
         ]
 
-    def retriever(self, question, k, role):
+    def retriever(self, question, k, role, *, enforce_access_control=False):
+        self.last_enforce = enforce_access_control
         return [CHUNK]
 
     def execute_tool(self, call):
@@ -58,7 +59,12 @@ def test_health_reports_the_configuration_under_test(client, monkeypatch):
     assert body["model"] is None  # only meaningful for the anthropic provider
     assert body["embedding_provider"] == "stub"
     assert body["top_k"] == 5
-    assert body["flags"] == {}
+    assert body["flags"] == {
+        "ENFORCE_ACCESS_CONTROL": False,
+        "ISOLATE_CONTEXT": False,
+        "TOOL_GUARD": False,
+        "OUTPUT_FILTER": False,
+    }
 
     monkeypatch.setenv("LLM_PROVIDER", "anthropic")
     monkeypatch.setenv("ANTHROPIC_MODEL", "claude-haiku-5-5")
@@ -80,6 +86,8 @@ def test_ask_returns_the_contract(client):
         }
     ]
     assert body["tool_calls"] == []
+    assert body["blocked_tool_calls"] == []
+    assert body["output_filtered"] is False
 
 
 def test_role_defaults_to_public(client):
@@ -121,3 +129,20 @@ def test_tool_calls_outbox_newest_first(client):
 def test_clearing_the_outbox(client):
     assert client.delete("/tool-calls").json() == {"deleted": 2}
     assert client.get("/tool-calls").json() == []
+
+
+def test_flags_reach_the_retriever_and_health(monkeypatch):
+    services = FakeServices(StubLLM())
+    app.dependency_overrides[get_services] = lambda: services
+    try:
+        monkeypatch.setenv("ENFORCE_ACCESS_CONTROL", "1")
+        monkeypatch.setenv("OUTPUT_FILTER", "true")
+        c = TestClient(app)
+        assert c.post("/ask", json={"question": "Q"}).status_code == 200
+        assert services.last_enforce is True
+        flags = c.get("/health").json()["flags"]
+        assert flags["ENFORCE_ACCESS_CONTROL"] is True
+        assert flags["OUTPUT_FILTER"] is True
+        assert flags["ISOLATE_CONTEXT"] is False
+    finally:
+        app.dependency_overrides.clear()

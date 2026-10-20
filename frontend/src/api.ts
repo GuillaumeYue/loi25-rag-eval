@@ -15,10 +15,17 @@ export interface ToolCall {
   arguments: Record<string, unknown>;
 }
 
+export interface BlockedToolCall extends ToolCall {
+  reason: string;
+}
+
 export interface AskResponse {
   answer: string;
   sources: Source[];
   tool_calls: ToolCall[];
+  // Added with the mitigations; absent or empty in the baseline.
+  blocked_tool_calls?: BlockedToolCall[];
+  output_filtered?: boolean;
 }
 
 export class ApiError extends Error {

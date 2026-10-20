@@ -19,8 +19,12 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 @pytest.fixture(autouse=True)
 def stub_provider(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Unit tests always run with the stub embedder, whatever .env says."""
+    """Unit tests always run with stub providers and every mitigation off,
+    whatever .env or the shell says. Tests that need a flag set it themselves."""
     monkeypatch.setenv("EMBEDDING_PROVIDER", "stub")
+    monkeypatch.setenv("LLM_PROVIDER", "stub")
+    for name in ("ENFORCE_ACCESS_CONTROL", "ISOLATE_CONTEXT", "TOOL_GUARD", "OUTPUT_FILTER"):
+        monkeypatch.delenv(name, raising=False)
 
 
 @pytest.fixture

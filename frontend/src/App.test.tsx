@@ -95,6 +95,27 @@ describe("App", () => {
     expect(screen.getByText(/x@exemple\.net/)).toBeInTheDocument();
   });
 
+  it("shows blocked tool calls with their reason and the output-filter notice", async () => {
+    mockFetch(200, {
+      ...RESPONSE,
+      answer: "Réponse retenue : elle contenait des renseignements internes.",
+      output_filtered: true,
+      blocked_tool_calls: [
+        {
+          tool: "send_email",
+          arguments: { to: "x@collecte-donnees.example.net" },
+          reason: "domaine destinataire non autorisé : collecte-donnees.example.net",
+        },
+      ],
+    });
+    render(<App />);
+    await askQuestion();
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Filtre de sortie");
+    expect(screen.getByText(/bloqué : domaine destinataire non autorisé/)).toBeInTheDocument();
+    expect(screen.getByText(/collecte-donnees\.example\.net"/)).toBeInTheDocument();
+  });
+
   it("shows the backend error detail", async () => {
     mockFetch(502, { detail: "Claude API error 429: quota" });
     render(<App />);
