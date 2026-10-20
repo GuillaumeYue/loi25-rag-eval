@@ -37,6 +37,25 @@ export class ApiError extends Error {
   }
 }
 
+export interface Health {
+  status: string;
+  llm_provider: string;
+  model: string | null;
+  flags: Record<string, boolean>;
+}
+
+/** The backend's configuration (provider, model, mitigation flags), or null if unavailable. */
+export async function getHealth(): Promise<Health | null> {
+  try {
+    const response = await fetch("/health");
+    if (!response.ok) return null;
+    const body = (await response.json()) as Partial<Health>;
+    return body && typeof body.flags === "object" ? (body as Health) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function ask(question: string, role: Role): Promise<AskResponse> {
   const response = await fetch("/ask", {
     method: "POST",

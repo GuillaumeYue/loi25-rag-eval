@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { ApiError, ask, type AskResponse, type Role } from "./api";
+import { useEffect, useState } from "react";
+import { ApiError, ask, getHealth, type AskResponse, type Health, type Role } from "./api";
 import { AnswerView } from "./components/AnswerView";
+import { ConfigBar } from "./components/ConfigBar";
 import { QuestionForm } from "./components/QuestionForm";
 import { SourceList } from "./components/SourceList";
 import { ToolCallList } from "./components/ToolCallList";
@@ -11,6 +12,11 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<AskResponse | null>(null);
+  const [health, setHealth] = useState<Health | null>(null);
+
+  useEffect(() => {
+    getHealth().then(setHealth);
+  }, []);
 
   async function submit(question: string) {
     setLoading(true);
@@ -33,6 +39,7 @@ export default function App() {
           Assistant de conformité d'Énergie Boréale (fictive). Projet de test : les documents
           et l'entreprise sont inventés.
         </p>
+        <ConfigBar health={health} />
       </header>
 
       <QuestionForm role={role} onRoleChange={setRole} onSubmit={submit} loading={loading} />

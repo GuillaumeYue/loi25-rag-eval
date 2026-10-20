@@ -32,12 +32,20 @@ const RESPONSE: AskResponse = {
   tool_calls: [],
 };
 
-function mockFetch(status: number, body: unknown) {
-  const fetchMock = vi.fn(async () =>
-    new Response(JSON.stringify(body), {
-      status,
-      headers: { "content-type": "application/json" },
-    }),
+const BASELINE_HEALTH = {
+  status: "ok",
+  llm_provider: "anthropic",
+  model: "claude-haiku-5-5",
+  flags: { ENFORCE_ACCESS_CONTROL: false, ISOLATE_CONTEXT: false, TOOL_GUARD: false, OUTPUT_FILTER: false },
+};
+
+const json = (status: number, body: unknown) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+
+// /health answers with `health` (the page asks for it on load); every other URL with `body`.
+function mockFetch(status: number, body: unknown, health: unknown = BASELINE_HEALTH) {
+  const fetchMock = vi.fn(async (url: string) =>
+    url === "/health" ? json(200, health) : json(status, body),
   );
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
@@ -61,7 +69,8 @@ describe("App", () => {
     await askQuestion("Quel délai ?");
 
     await screen.findByRole("heading", { name: "Réponse" });
-    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const askCall = fetchMock.mock.calls.find(([u]) => u === "/ask");
+    const [url, init] = askCall as unknown as [string, RequestInit];
     expect(url).toBe("/ask");
     expect(JSON.parse(init.body as string)).toEqual({ question: "Quel délai ?", role: "employe" });
   });
@@ -125,6 +134,38 @@ describe("App", () => {
       expect(screen.getByRole("alert")).toHaveTextContent("Claude API error 429: quota"),
     );
     expect(screen.queryByRole("heading", { name: "Réponse" })).not.toBeInTheDocument();
+  });
+
+  it("shows the configuration under test from /health", async () => {
+    mockFetch(200, RESPONSE);
+    render(<App />);
+    const footer = await screen.findByRole("note", { name: "Configuration" });
+    expect(footer).toHaveTextContent("claude-haiku-5-5");
+    expect(footer).toHaveTextContent("aucune (configuration de référence)");
+  });
+
+  it("lists the active mitigation flags", async () => {
+    mockFetch(200, RESPONSE, {
+      ...BASELINE_HEALTH,
+      flags: { ...BASELINE_HEALTH.flags, ENFORCE_ACCESS_CONTROL: true, OUTPUT_FILTER: true },
+    });
+    render(<App />);
+    const footer = await screen.findByRole("note", { name: "Configuration" });
+    expect(footer).toHaveTextContent("Mitigations actives");
+    expect(footer).toHaveTextContent("ENFORCE_ACCESS_CONTROL");
+    expect(footer).toHaveTextContent("OUTPUT_FILTER");
+    expect(footer).not.toHaveTextContent("TOOL_GUARD");
+  });
+
+  it("hides the configuration when /health is unavailable", async () => {
+    const fetchMock = mockFetch(200, RESPONSE, { detail: "not a health payload" });
+    render(<App />);
+    // Wait until the /health response has been read, then let React settle.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/health"));
+    const healthResponse = fetchMock.mock.results[0].value as Promise<Response>;
+    await healthResponse;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.queryByRole("note", { name: "Configuration" })).not.toBeInTheDocument();
   });
 
   it("disables the button while the question is empty", () => {

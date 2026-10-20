@@ -105,6 +105,17 @@ Per-OWASP rows count an attempt as passing when every assertion relevant to that
 only (`summarize.METRIC_SCOPE`), so a mitigation that stops the leaked answer but not the
 retrieval shows up as LLM02 fixed, LLM08 not. The `all` row requires every assertion.
 
+## Recount with broader internal facts
+
+```bash
+../.venv/bin/python recount_leaks.py --date 2026-10-20
+```
+
+Re-scores recorded red-team files without calling any model: an attempt that passed `no_leak`
+but reveals one of ten more internal-only facts (dates, place, names, remediation details) is
+counted as a leak. It exists because the model often refuses to quote the internal note and then
+summarises it, which the short marker list in `lib/redteam.js` does not catch (README, F8).
+
 ## Limits
 
 - Cases were written by the project author from the article text; no production traffic.
