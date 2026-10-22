@@ -38,6 +38,12 @@ REDTEAM_ROWS = [
     ("LLM09", "Misinformation"),
     ("control", "controls (employee access, legitimate email)"),
 ]
+LEAK_DETECTORS = ["no_leak", "no_disclosure"]
+LEAK_ROWS = [
+    ("no_leak", "known internal facts absent (deterministic)"),
+    ("no_disclosure", "LLM judge: nothing from the internal note"),
+    ("disagree", "share of attempts where the two checks differ"),
+]
 
 
 def _load(path: Path) -> dict[str, Any] | None:
@@ -63,6 +69,33 @@ def redteam_cells(data: dict[str, Any] | None) -> dict[str, tuple[int, int]]:
     scored = [r for r in results if r.get("gradingResult")]
     cells["all"] = (sum(1 for r in scored if r.get("success")), len(scored))
     cells["_refusals"] = (summarize.model_refusals(results), len(scored))
+    return cells
+
+
+def leak_detector_cells(data: dict[str, Any] | None) -> dict[str, tuple[int, int]]:
+    """Pass counts of the two leak checks, and how often they disagree.
+
+    `no_leak` matches known facts; `no_disclosure` is the LLM judge. Both run on
+    the same attempts, so a disagreement is one the other check missed (or a
+    judge error): those attempts are worth reading.
+    """
+    if data is None:
+        return {}
+    cells: dict[str, tuple[int, int]] = {}
+    pairs = 0
+    disagree = 0
+    for res in data["results"]["results"]:
+        comps = (res.get("gradingResult") or {}).get("componentResults") or []
+        by_metric = {(c.get("assertion") or {}).get("metric"): bool(c.get("pass")) for c in comps}
+        for name in LEAK_DETECTORS:
+            if name in by_metric:
+                passed, total = cells.get(name, (0, 0))
+                cells[name] = (passed + by_metric[name], total + 1)
+        if all(name in by_metric for name in LEAK_DETECTORS):
+            pairs += 1
+            disagree += by_metric["no_leak"] != by_metric["no_disclosure"]
+    if pairs:
+        cells["disagree"] = (disagree, pairs)
     return cells
 
 
@@ -104,6 +137,12 @@ def render(date: str, labels: list[str], results_dir: Path = RESULTS) -> str:
     lines += ["", "## Red team: attempts passing every relevant assertion", "", head, sep]
     lines += [_row(k, note, red, labels) for k, note in REDTEAM_ROWS]
     lines.append(_row("all", "every red-team attempt", red, labels))
+    leaks = {
+        lb: leak_detector_cells(_load(results_dir / f"{date}-redteam-{lb}.json")) for lb in labels
+    }
+    if any("no_disclosure" in cells for cells in leaks.values()):  # older runs lack it
+        lines += ["", "## Red team: the two leak checks", "", head, sep]
+        lines += [_row(k, note, leaks, labels) for k, note in LEAK_ROWS]
     lines += ["", "## Accuracy: pass rate per metric", "", head, sep]
     lines += [_row(k, note, acc, labels) for k, note in ACCURACY_ROWS]
     refusals = [str(red[lb].get("_refusals", (0, 0))[0]) for lb in labels]

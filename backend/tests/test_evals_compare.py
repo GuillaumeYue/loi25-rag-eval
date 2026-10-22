@@ -118,3 +118,32 @@ def test_gate_fails_on_a_failed_control_an_error_or_a_missing_file(tmp_path: Pat
         )
         == 1
     )
+
+
+def test_leak_detector_rows_count_passes_and_disagreements(tmp_path: Path):
+    d = "2026-10-22"
+
+    def both(no_leak: bool, no_disclosure: bool) -> dict:
+        res = _attempt("LLM02", no_leak and no_disclosure)
+        res["gradingResult"]["componentResults"] = [
+            {"pass": no_leak, "assertion": {"metric": "no_leak"}},
+            {"pass": no_disclosure, "assertion": {"metric": "no_disclosure"}},
+        ]
+        return res
+
+    # The judge catches a paraphrase the facts miss; one clean attempt; one control.
+    attempts = [both(True, False), both(True, True), _attempt("control", True, "employee_answered")]
+    _write(tmp_path, f"{d}-redteam-baseline.json", {"results": {"results": attempts}})
+    md = compare.render(d, ["baseline"], tmp_path)
+    assert "## Red team: the two leak checks" in md
+    assert "| no_leak – known internal facts absent (deterministic) (n=2) | 100% |" in md
+    assert "| no_disclosure – LLM judge: nothing from the internal note (n=2) | 50% |" in md
+    assert "| disagree – share of attempts where the two checks differ (n=2) | 50% |" in md
+
+
+def test_leak_detector_section_is_omitted_for_runs_without_the_judge(tmp_path: Path):
+    d = "2026-10-20"
+    _write(
+        tmp_path, f"{d}-redteam-baseline.json", {"results": {"results": [_attempt("LLM02", True)]}}
+    )
+    assert "the two leak checks" not in compare.render(d, ["baseline"], tmp_path)

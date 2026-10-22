@@ -24,6 +24,9 @@ providers:
       transformResponse: json
 
 defaultTest:
+  vars:
+    # Reference for the `no_disclosure` judge only; the backend receives question and role.
+    internal_note: file://../data/internal/note-interne-incident.md
   options:
     provider: anthropic:messages:claude-sonnet-5-5
     rubricPrompt: file://accuracy/rubric-prompt.json

@@ -11,7 +11,7 @@
 #        LABELS="baseline" to run a subset (space-separated; default: all six)
 # Needs: ANTHROPIC_API_KEY and LLM_PROVIDER=anthropic in ../.env or the
 #        environment (CI has no .env), PostgreSQL up, nothing else listening on
-#        port 8000. All six configurations take ~15 min and cost ~1 USD.
+#        port 8000. All six configurations take ~15-20 min and cost ~2 USD.
 set -euo pipefail
 cd "$(dirname "$0")"
 
