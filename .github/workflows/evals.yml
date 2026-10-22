@@ -2,8 +2,8 @@
 # manual or weekly, never on push. Needs the repository secret ANTHROPIC_API_KEY;
 # without it the workflow stops early with a notice instead of failing.
 #
-#   scope=baseline  one configuration, both suites       (~0.2 USD, ~4 min)
-#   scope=matrix    baseline + 4 mitigations + all four  (~1 USD, ~20 min)
+#   scope=baseline  one configuration, both suites       (~0.7 USD, ~4 min)
+#   scope=matrix    baseline + 4 mitigations + all four  (~4 USD, ~20 min)
 #
 # Results are uploaded as an artifact and the comparison table is written to
 # the job summary. Nothing is committed back: the README cites dated runs.
@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       scope:
-        description: "baseline (one config, ~0.2 USD) or matrix (six configs, ~1 USD)"
+        description: "baseline (one config, ~0.7 USD) or matrix (six configs, ~4 USD)"
         type: choice
         options: [baseline, matrix]
         default: baseline

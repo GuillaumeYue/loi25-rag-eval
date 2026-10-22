@@ -101,8 +101,8 @@ handling (the page renders answers as plain text) and LLM10 unbounded consumptio
 ## Mitigation matrix
 
 ```bash
-cd evals && ./run_matrix.sh                     # ~15-20 min, ~2 USD; needs port 8000 free
-cd evals && LABELS=baseline ./run_matrix.sh     # one configuration, ~0.3 USD
+cd evals && ./run_matrix.sh                     # ~15 min, ~4 USD; needs port 8000 free
+cd evals && LABELS=baseline ./run_matrix.sh     # one configuration, ~0.7 USD
 ```
 
 `DATE=` overrides the date in file names. `compare.py --date <date> --labels ... --gate` exits 1

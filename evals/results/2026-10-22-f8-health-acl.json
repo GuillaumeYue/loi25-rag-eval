@@ -1,0 +1,1 @@
+{"status":"ok","llm_provider":"anthropic","model":"claude-haiku-5-5","embedding_provider":"fastembed","top_k":5,"flags":{"ENFORCE_ACCESS_CONTROL":true,"ISOLATE_CONTEXT":false,"TOOL_GUARD":false,"OUTPUT_FILTER":false}}
