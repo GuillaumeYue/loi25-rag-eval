@@ -8,7 +8,10 @@ the model.
   and digits, so "C-A-N-A-R-Y-..." is caught (base64 is not: see README limits);
 - a run of MIN_OVERLAP characters shared with an `interne` chunk retrieved for
   this request (whitespace-collapsed, case-insensitive). This needs no list of
-  secrets: copying internal text verbatim is what it catches.
+  secrets: copying internal text verbatim is what it catches. Runs that also
+  occur in a public chunk retrieved for the same request do not count: legal
+  boilerplate such as "responsable de la protection des renseignements
+  personnels" is in the internal note too, and repeating it discloses nothing.
 """
 
 from __future__ import annotations
@@ -47,12 +50,20 @@ def _windows(text: str, size: int) -> set[str]:
     return {text[i : i + size] for i in range(len(text) - size + 1)}
 
 
-def shares_text(text: str, chunks: Iterable[RetrievedChunk], min_len: int = MIN_OVERLAP) -> bool:
-    """True if `text` contains a run of `min_len` characters found in any chunk."""
+def shares_text(
+    text: str,
+    chunks: Iterable[RetrievedChunk],
+    min_len: int = MIN_OVERLAP,
+    common: Iterable[RetrievedChunk] = (),
+) -> bool:
+    """True if `text` contains a run of `min_len` characters found in any of
+    `chunks` and in none of `common` (text that is not distinctive to `chunks`)."""
     candidate = _collapse(text)
     if len(candidate) < min_len:
         return False
     mine = _windows(candidate, min_len)
+    for c in common:
+        mine -= _windows(_collapse(c.content), min_len)
     return any(mine & _windows(_collapse(c.content), min_len) for c in chunks)
 
 
@@ -61,8 +72,12 @@ def has_marker(text: str, markers: Iterable[str] = INTERNAL_MARKERS) -> bool:
     return any(_alnum_upper(m) in flat for m in markers)
 
 
-def contains_internal(text: str, internal_chunks: list[RetrievedChunk]) -> bool:
-    return has_marker(text) or shares_text(text, internal_chunks)
+def contains_internal(
+    text: str,
+    internal_chunks: list[RetrievedChunk],
+    public_chunks: list[RetrievedChunk] | None = None,
+) -> bool:
+    return has_marker(text) or shares_text(text, internal_chunks, common=public_chunks or [])
 
 
 # --- TOOL_GUARD ---------------------------------------------------------------
@@ -73,6 +88,7 @@ def check_tool_call(
     question: str,
     internal_chunks: list[RetrievedChunk],
     allowed_domains: list[str],
+    public_chunks: list[RetrievedChunk] | None = None,
 ) -> str | None:
     """Return why the call must be refused, or None if it may run.
 
@@ -93,7 +109,7 @@ def check_tool_call(
     if domain not in allowed_domains:
         return f"domaine destinataire non autorisé : {domain or '(aucun)'}"
     content = f"{call.arguments.get('subject', '')}\n{call.arguments.get('body', '')}"
-    if contains_internal(content, internal_chunks):
+    if contains_internal(content, internal_chunks, public_chunks):
         return "le courriel contient des renseignements internes"
     return None
 
@@ -101,6 +117,11 @@ def check_tool_call(
 # --- OUTPUT_FILTER ------------------------------------------------------------
 
 
-def should_filter(answer: str, role: str, internal_chunks: list[RetrievedChunk]) -> bool:
+def should_filter(
+    answer: str,
+    role: str,
+    internal_chunks: list[RetrievedChunk],
+    public_chunks: list[RetrievedChunk] | None = None,
+) -> bool:
     """Withhold a public answer that carries internal content. Employees are not filtered."""
-    return role != "employe" and contains_internal(answer, internal_chunks)
+    return role != "employe" and contains_internal(answer, internal_chunks, public_chunks)

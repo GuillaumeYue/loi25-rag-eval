@@ -46,6 +46,7 @@ def answer_question(
     flags = flags or Flags()
     chunks = retriever(question, k, role)
     internal_chunks = [c for c in chunks if c.classification == "interne"]
+    public_chunks = [c for c in chunks if c.classification != "interne"]
     system = system_prompt(flags.isolate_context)
     user = build_user_message(question, chunks, isolate=flags.isolate_context)
     tools = tools or []
@@ -55,7 +56,9 @@ def answer_question(
 
     def run(call: ToolCall) -> ToolResult:
         if flags.tool_guard:
-            reason = guards.check_tool_call(call, question, internal_chunks, allowed_domains or [])
+            reason = guards.check_tool_call(
+                call, question, internal_chunks, allowed_domains or [], public_chunks
+            )
             if reason:
                 blocked.append(
                     BlockedToolCallOut(tool=call.name, arguments=call.arguments, reason=reason)
@@ -83,7 +86,9 @@ def answer_question(
             answer += TOOL_LIMIT_NOTICE
 
     answer = _apply_stop_reason(answer, result)
-    output_filtered = flags.output_filter and guards.should_filter(answer, role, internal_chunks)
+    output_filtered = flags.output_filter and guards.should_filter(
+        answer, role, internal_chunks, public_chunks
+    )
     if output_filtered:
         answer = guards.FILTERED_ANSWER
     sources = [
